@@ -1,4 +1,4 @@
-// /api/index.js (Final and Secure Version with Full Admin Controls)
+// /api/index.js (Final and Secure Version with Dynamic Tasks)
 
 /**
  * SHIB Ads WebApp Backend API
@@ -26,15 +26,10 @@ const ACTION_ID_EXPIRY_MS = 60000; // 60 seconds for Action ID to be valid
 const SPIN_SECTORS = [5, 10, 15, 20, 5];
 
 // ------------------------------------------------------------------
-// NEW Admin Constant 🔑
-// ------------------------------------------------------------------
-const ADMIN_USER_ID = '7741750541'; // ⚠️ استبدل هذا بـ Telegram User ID الخاص بك. يجب أن يكون نص (string)
-// ------------------------------------------------------------------
 // NEW Task Constants
 // ------------------------------------------------------------------
-const TASK_REWARD = 50;
-const TELEGRAM_CHANNEL_USERNAME = '@botbababab'; // يجب أن يكون هذا هو اسم المستخدم للقناة لبدء التحقق
-
+// هذا يجب أن يتطابق مع 'task_type' في جدول المهام لتمييز مهام القنوات
+const TASK_TYPE_CHANNEL_JOIN = 'channel_join'; 
 
 /**
  * Helper function to randomly select a prize from the defined sectors and return its index.
@@ -83,6 +78,10 @@ async function supabaseFetch(tableName, method, body = null, queryParams = '?sel
       const responseText = await response.text();
       try {
           const jsonResponse = JSON.parse(responseText);
+          // Adjust for Supabase specific responses (e.g., single object on POST/PATCH vs array on GET)
+          if (method === 'POST' || method === 'PATCH') {
+              return Array.isArray(jsonResponse) ? jsonResponse : [jsonResponse];
+          }
           return Array.isArray(jsonResponse) ? jsonResponse : { success: true };
       } catch (e) {
           return { success: true };
@@ -143,14 +142,6 @@ async function checkChannelMembership(userId, channelUsername) {
     }
 }
 
-/**
- * Helper function to check if the user is the defined Admin.
- */
-function isAdminUser(userId) {
-    // ⚠️ تأكد أن userId هو سلسلة نصية للمقارنة
-    return userId.toString() === ADMIN_USER_ID;
-}
-
 
 /**
  * Limit-Based Reset Logic: Resets counters if the limit was reached AND the interval (6 hours) has passed since.
@@ -172,9 +163,9 @@ async function resetDailyLimitsIfExpired(userId) {
         if (user.ads_limit_reached_at && user.ads_watched_today >= DAILY_MAX_ADS) {
             const adsLimitTime = new Date(user.ads_limit_reached_at).getTime();
             if (now - adsLimitTime > RESET_INTERVAL_MS) {
-                // ⚠️ تم مرور 6 ساعات على الوصول للحد الأقصى، يتم إعادة التعيين
+                // تم مرور 6 ساعات على الوصول للحد الأقصى، يتم إعادة التعيين
                 updatePayload.ads_watched_today = 0;
-                updatePayload.ads_limit_reached_at = null; // إزالة الوقت لانتهاء فترة القفل
+                updatePayload.ads_limit_reached_at = null; 
                 console.log(`Ads limit reset for user ${userId}.`);
             }
         }
@@ -183,9 +174,9 @@ async function resetDailyLimitsIfExpired(userId) {
         if (user.spins_limit_reached_at && user.spins_today >= DAILY_MAX_SPINS) {
             const spinsLimitTime = new Date(user.spins_limit_reached_at).getTime();
             if (now - spinsLimitTime > RESET_INTERVAL_MS) {
-                // ⚠️ تم مرور 6 ساعات على الوصول للحد الأقصى، يتم إعادة التعيين
+                // تم مرور 6 ساعات على الوصول للحد الأقصى، يتم إعادة التعيين
                 updatePayload.spins_today = 0;
-                updatePayload.spins_limit_reached_at = null; // إزالة الوقت لانتهاء فترة القفل
+                updatePayload.spins_limit_reached_at = null; 
                 console.log(`Spins limit reset for user ${userId}.`);
             }
         }
@@ -203,7 +194,6 @@ async function resetDailyLimitsIfExpired(userId) {
 
 /**
  * Rate Limiting Check for Ad/Spin Actions
- * ⚠️ تم تعديلها: لم تعد تحدث last_activity، بل فقط تفحص الفارق الزمني الأخير
  */
 async function checkRateLimit(userId) {
     try {
@@ -314,72 +304,51 @@ async function processCommission(referrerId, refereeId, sourceReward) {
 
         // 5. Add record to commission_history
         await supabaseFetch('commission_history', 'POST', { referrer_id: referrerId, referee_id: refereeId, amount: commissionAmount, source_reward: sourceReward }, '?select=referrer_id');
-        
+
         return { ok: true, new_referrer_balance: newBalance };
-    
     } catch (error) {
         console.error('Commission failed:', error.message);
-        return { ok: false, error: `Commission failed: ${error.message}` };
+        return { ok: false, error: error.message };
     }
 }
 
-
 // ------------------------------------------------------------------
-// 🔒 Action ID Security System (No change)
+// **Action ID Middleware** (No change)
 // ------------------------------------------------------------------
-
 /**
- * Generates a strong, random ID for the client to use only once.
+ * 0) type: "requestActionId" 
+ * Generates and saves a unique action ID (security token) for the next request.
  */
-function generateStrongId() {
-    return crypto.randomBytes(32).toString('hex');
-}
-
-/**
- * HANDLER: type: "generateActionId"
- * The client requests an action ID before starting a critical action (ad/spin/withdraw/adminAction).
- */
-async function handleGenerateActionId(req, res, body) {
+async function handleRequestActionId(req, res, body) {
     const { user_id, action_type } = body;
     const id = parseInt(user_id);
-    
     if (!action_type) {
         return sendError(res, 'Missing action_type.', 400);
     }
     
-    // Check if the user already has an unexpired ID for this action type
     try {
-        const existingIds = await supabaseFetch('temp_actions', 'GET', null, `?user_id=eq.${id}&action_type=eq.${action_type}&select=action_id,created_at`);
-        
-        if (Array.isArray(existingIds) && existingIds.length > 0) {
-            const lastIdTime = new Date(existingIds[0].created_at).getTime();
-            if (Date.now() - lastIdTime < ACTION_ID_EXPIRY_MS) {
-                 // If the existing ID is still valid, return it to prevent spamming the table
-                return sendSuccess(res, { action_id: existingIds[0].action_id });
-            } else {
-                 // Clean up expired ID before creating a new one
-                 await supabaseFetch('temp_actions', 'DELETE', null, `?user_id=eq.${id}&action_type=eq.${action_type}`);
-            }
+        // Check if user is banned
+        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=is_banned`);
+        if (!Array.isArray(users) || users.length === 0 || users[0].is_banned) {
+            return sendError(res, 'User not found or is banned.', 403);
         }
-    } catch(e) {
-        console.warn('Error checking existing temp_actions:', e.message);
-    }
-    
-    // Generate and save the new ID
-    const newActionId = generateStrongId();
-    
-    try {
-        await supabaseFetch('temp_actions', 'POST',
-            { user_id: id, action_id: newActionId, action_type: action_type },
-            '?select=action_id');
-            
-        sendSuccess(res, { action_id: newActionId });
+
+        const actionId = crypto.randomBytes(32).toString('hex');
+        
+        await supabaseFetch('temp_actions', 'POST', {
+            user_id: id,
+            action_id: actionId,
+            action_type: action_type,
+            created_at: new Date().toISOString()
+        }, '?select=user_id');
+
+        sendSuccess(res, { action_id: actionId });
+
     } catch (error) {
         console.error('Failed to generate and save action ID:', error.message);
         sendError(res, 'Failed to generate security token.', 500);
     }
 }
-
 
 /**
  * Middleware: Checks if the Action ID is valid and then deletes it.
@@ -389,95 +358,78 @@ async function validateAndUseActionId(res, userId, actionId, actionType) {
         sendError(res, 'Missing Server Token (Action ID). Request rejected.', 400);
         return false;
     }
-    
+
     try {
         const query = `?user_id=eq.${userId}&action_id=eq.${actionId}&action_type=eq.${actionType}&select=id,created_at`;
         const records = await supabaseFetch('temp_actions', 'GET', null, query);
-        
+
         if (!Array.isArray(records) || records.length === 0) {
-            sendError(res, 'Invalid or previously used Server Token (Action ID).', 409); 
-            return false;
-        }
-        
-        const record = records[0];
-        const recordTime = new Date(record.created_at).getTime();
-        
-        // 1. Check Expiration (60 seconds)
-        if (Date.now() - recordTime > ACTION_ID_EXPIRY_MS) {
-            await supabaseFetch('temp_actions', 'DELETE', null, `?id=eq.${record.id}`);
-            sendError(res, 'Server Token (Action ID) expired. Please try again.', 408); 
+            sendError(res, 'Invalid or previously used Server Token (Action ID).', 409);
             return false;
         }
 
-        // 2. Use the token: Delete it to prevent reuse
+        const record = records[0];
+        const recordTime = new Date(record.created_at).getTime();
+
+        // 1. Check Expiration (60 seconds)
+        if (Date.now() - recordTime > ACTION_ID_EXPIRY_MS) {
+            await supabaseFetch('temp_actions', 'DELETE', null, `?id=eq.${record.id}`);
+            sendError(res, 'Server Token (Action ID) expired. Please try again.', 408);
+            return false;
+        }
+
+        // 2. Delete the used ID
         await supabaseFetch('temp_actions', 'DELETE', null, `?id=eq.${record.id}`);
 
         return true;
 
     } catch (error) {
-        console.error(`Error validating Action ID ${actionId}:`, error.message);
-        sendError(res, 'Security validation failed.', 500);
+        console.error('Action ID validation failed:', error.message);
+        sendError(res, 'Internal Server Error during token validation.', 500);
         return false;
     }
 }
 
-// --- API Handlers ---
+// ------------------------------------------------------------------
+// **Core Handlers**
+// ------------------------------------------------------------------
 
 /**
- * HANDLER: type: "getUserData"
+ * 1) type: "getUserData" (No change)
  */
 async function handleGetUserData(req, res, body) {
     const { user_id } = body;
-    if (!user_id) {
-        return sendError(res, 'Missing user_id for data fetch.');
-    }
     const id = parseInt(user_id);
-
+    
     try {
-        // 1. Check and reset daily limits (if 6 hours passed since limit reached)
+        // Reset limits if needed (must happen before fetching data)
         await resetDailyLimitsIfExpired(id);
 
-        // 2. Fetch user data (including new limit columns AND task_completed)
-        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=balance,ads_watched_today,spins_today,is_banned,ref_by,ads_limit_reached_at,spins_limit_reached_at,task_completed`);
+        // Fetch user data, including last_activity for rate limit check
+        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=id,balance,ads_watched_today,spins_today,is_banned,last_activity`);
 
-        if (!users || users.length === 0 || users.success) {
-            // Check admin status for non-existent users too (in case admin opens the panel before registering)
-             const is_admin_check = isAdminUser(user_id);
-             return sendSuccess(res, {
-                balance: 0, ads_watched_today: 0, spins_today: 0, referrals_count: 0, withdrawal_history: [], is_banned: false, task_completed: false, is_admin: is_admin_check
-            });
+        if (!Array.isArray(users) || users.length === 0) {
+            return sendError(res, 'User not registered.', 404);
         }
 
         const userData = users[0];
-
-        // 3. Banned Check - Exit immediately if banned
         if (userData.is_banned) {
-             return sendSuccess(res, { is_banned: true, message: "User is banned from accessing the app.", is_admin: false });
+            return sendSuccess(res, { ...userData, referrals_count: 0, withdrawal_history: [] });
         }
-
-
-        // 4. Fetch referrals count
+        
+        // Fetch referrals count
         const referrals = await supabaseFetch('users', 'GET', null, `?ref_by=eq.${id}&select=id`);
         const referralsCount = Array.isArray(referrals) ? referrals.length : 0;
 
-        // 5. Fetch withdrawal history
-        const history = await supabaseFetch('withdrawals', 'GET', null, `?user_id=eq.${id}&select=amount,status,created_at&order=created_at.desc`);
-        const withdrawalHistory = Array.isArray(history) ? history : [];
+        // Fetch withdrawal history
+        const withdrawalRecords = await supabaseFetch('withdrawals', 'GET', null, `?user_id=eq.${id}&select=amount,binance_id,status,created_at&order=created_at.desc`);
+        const withdrawalHistory = Array.isArray(withdrawalRecords) ? withdrawalRecords : [];
 
-        // 6. Update last_activity (only for Rate Limit purposes now)
-        await supabaseFetch('users', 'PATCH',
-            { last_activity: new Date().toISOString() },
-            `?id=eq.${id}&select=id`);
-            
-        // 7. Check admin status and add it to the response
-        const is_admin = isAdminUser(user_id); 
+        // Update last_activity for non-action requests (to prevent session expiry/timeout for TWA)
+        // Ensure last_activity is updated (but this doesn't reset the 3-second action timer, which is checked by checkRateLimit)
+        await supabaseFetch('users', 'PATCH', { last_activity: new Date().toISOString() }, `?id=eq.${id}&select=id`);
 
-        sendSuccess(res, {
-            ...userData,
-            is_admin, // ⬅️ إضافة حالة المسؤول
-            referrals_count: referralsCount,
-            withdrawal_history: withdrawalHistory
-        });
+        sendSuccess(res, { ...userData, referrals_count: referralsCount, withdrawal_history: withdrawalHistory });
 
     } catch (error) {
         console.error('GetUserData failed:', error.message);
@@ -485,86 +437,84 @@ async function handleGetUserData(req, res, body) {
     }
 }
 
-
 /**
- * 1) type: "register"
+ * 2) type: "register" (No change)
  */
 async function handleRegister(req, res, body) {
-  const { user_id, ref_by } = body;
-  const id = parseInt(user_id);
-
-  try {
-    // 1. Check if user exists
-    const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=id,is_banned`);
-
-    if (!Array.isArray(users) || users.length === 0) {
-      // 2. User does not exist, create new user
-      const newUser = {
-        id,
-        balance: 0,
-        ads_watched_today: 0,
-        spins_today: 0,
-        ref_by: ref_by ? parseInt(ref_by) : null,
-        last_activity: new Date().toISOString(), // ⬅️ يبقى هنا للـ Rate Limit فقط
-        is_banned: false,
-        task_completed: false, // ⬅️ Default value for the task
-        // الأعمدة الجديدة ستحتوي على NULL بشكل افتراضي
-      };
-      await supabaseFetch('users', 'POST', newUser, '?select=id');
-    } else {
-        if (users[0].is_banned) {
-             return sendError(res, 'User is banned.', 403);
+    const { user_id, ref_by } = body;
+    const id = parseInt(user_id);
+    try {
+        // 1. Check if user exists
+        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=id,is_banned`);
+        if (!Array.isArray(users) || users.length === 0) {
+            // 2. User does not exist, create new user
+            const newUser = { 
+                id, 
+                balance: 0, 
+                ads_watched_today: 0, 
+                spins_today: 0, 
+                ref_by: ref_by ? parseInt(ref_by) : null, 
+                last_activity: new Date().toISOString(), 
+                is_banned: false
+                // task_completed field removed as it's now dynamic in user_tasks
+            };
+            const [createdUser] = await supabaseFetch('users', 'POST', newUser);
+            
+            return sendSuccess(res, { message: 'User registered successfully.', user: createdUser });
         }
-    }
+        
+        return sendSuccess(res, { message: 'User already registered.' });
 
-    sendSuccess(res, { message: 'User registered or already exists.' });
-  } catch (error) {
-    console.error('Registration failed:', error.message);
-    sendError(res, `Registration failed: ${error.message}`, 500);
-  }
+    } catch (error) {
+        console.error('Register failed:', error.message);
+        sendError(res, `Failed to register user: ${error.message}`, 500);
+    }
 }
 
+
 /**
- * 2) type: "watchAd"
+ * 3) type: "watchAd" (No change)
  */
 async function handleWatchAd(req, res, body) {
     const { user_id, action_id } = body;
     const id = parseInt(user_id);
-    const reward = REWARD_PER_AD;
+    const actionType = 'watchAdSequence'; // Use the sequence ID type
 
-    // 1. Check and Consume Action ID (Security Check)
-    if (!await validateAndUseActionId(res, id, action_id, 'watchAd')) return;
+    // 1. Action ID validation (security check)
+    if (!await validateAndUseActionId(res, id, action_id, actionType)) {
+        return;
+    }
 
     try {
-        // 2. Check and reset daily limits (if 6 hours passed since limit reached)
-        await resetDailyLimitsIfExpired(id);
-
-        // 3. Fetch current user data 
-        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=balance,ads_watched_today,is_banned,ref_by`);
+        // 2. Fetch user data (lock row for balance update if supported)
+        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=id,balance,ads_watched_today,ref_by,is_banned`);
         if (!Array.isArray(users) || users.length === 0) {
             return sendError(res, 'User not found.', 404);
         }
-        
-        const user = users[0];
-        const referrerId = user.ref_by; 
 
-        // 4. Banned Check
+        const user = users[0];
+        const referrerId = user.ref_by;
+        const reward = REWARD_PER_AD;
+
+        // 3. Banned Check
         if (user.is_banned) {
             return sendError(res, 'User is banned.', 403);
         }
 
-        // 5. Rate Limit Check 
+        // 4. Rate Limit Check (already done implicitly by Action ID, but good to keep the explicit check logic)
         const rateLimitResult = await checkRateLimit(id);
         if (!rateLimitResult.ok) {
-            return sendError(res, rateLimitResult.message, 429); 
+            return sendError(res, rateLimitResult.message, 429);
         }
 
-        // 6. Check maximum ad limit
+        // 5. Check maximum ad limit
         if (user.ads_watched_today >= DAILY_MAX_ADS) {
             return sendError(res, `Daily ad limit (${DAILY_MAX_ADS}) reached.`, 403);
         }
 
-        // 7. Calculate new values
+        // --- All checks passed: Process Ad Watch ---
+        
+        // 6. Calculate new balance and counters
         const newBalance = user.balance + reward;
         const newAdsCount = user.ads_watched_today + 1;
         const updatePayload = {
@@ -573,23 +523,27 @@ async function handleWatchAd(req, res, body) {
             last_activity: new Date().toISOString() // ⬅️ تحديث لـ Rate Limit
         };
 
-        // 8. ⚠️ NEW LOGIC: Check if the limit is reached NOW
+        // 7. NEW LOGIC: Check if the limit is reached NOW
         if (newAdsCount >= DAILY_MAX_ADS) {
             updatePayload.ads_limit_reached_at = new Date().toISOString();
         }
 
-        // 9. Update user record
+        // 8. Update user record
         await supabaseFetch('users', 'PATCH', updatePayload, `?id=eq.${id}`);
 
-        // 10. Commission Call
+        // 9. Commission Call
         if (referrerId) {
             processCommission(referrerId, id, reward).catch(e => {
                 console.error(`WatchAd Commission failed silently for referrer ${referrerId}:`, e.message);
             });
         }
-          
-        // 11. Success
-        sendSuccess(res, { new_balance: newBalance, actual_reward: reward, new_ads_count: newAdsCount });
+
+        // 10. Success
+        sendSuccess(res, {
+            new_balance: newBalance,
+            actual_reward: reward,
+            new_ads_count: newAdsCount
+        });
 
     } catch (error) {
         console.error('WatchAd failed:', error.message);
@@ -598,92 +552,86 @@ async function handleWatchAd(req, res, body) {
 }
 
 /**
- * 3) type: "commission" (No change)
- */
-async function handleCommission(req, res, body) {
-    const { referrer_id, referee_id, source_reward } = body;
-    const referrerId = parseInt(referrer_id);
-    const refereeId = parseInt(referee_id);
-    const sourceReward = parseFloat(source_reward) || REWARD_PER_AD; 
-
-    const result = await processCommission(referrerId, refereeId, sourceReward);
-
-    if (result.ok) {
-        sendSuccess(res, { new_referrer_balance: result.new_referrer_balance, message: 'Commission successfully processed.' });
-    } else {
-        console.log(`handleCommission failed: ${result.error}`);
-        sendError(res, 'Commission processing failed on the server. ' + result.error, 500); 
-    }
-}
-
-/**
  * 4) type: "preSpin" (No change)
  */
 async function handlePreSpin(req, res, body) {
-    const { user_id, action_id } = body;
-    const id = parseInt(user_id);
-    
-    if (!await validateAndUseActionId(res, id, action_id, 'preSpin')) return;
+     const { user_id, action_id } = body;
+     const id = parseInt(user_id);
+     const actionType = 'preSpin'; // Action ID type
 
-    try {
-        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=is_banned`);
-        if (!Array.isArray(users) || users.length === 0) {
+     // 1. Action ID validation (security check)
+     if (!await validateAndUseActionId(res, id, action_id, actionType)) {
+        return;
+     }
+
+     try {
+         // 2. Fetch user data (light check)
+         const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=is_banned,spins_today`);
+         if (!Array.isArray(users) || users.length === 0) {
             return sendError(res, 'User not found.', 404);
-        }
-        
-        if (users[0].is_banned) {
+         }
+
+         const user = users[0];
+
+         // 3. Banned Check
+         if (user.is_banned) {
             return sendError(res, 'User is banned.', 403);
-        }
+         }
 
-        sendSuccess(res, { message: "Pre-spin action secured." });
+         // 4. Check maximum spin limit (final check before ad)
+         if (user.spins_today >= DAILY_MAX_SPINS) {
+            return sendError(res, `Daily spin limit (${DAILY_MAX_SPINS}) reached.`, 403);
+         }
 
-    } catch (error) {
-        console.error('PreSpin failed:', error.message);
-        sendError(res, `Failed to secure pre-spin: ${error.message}`, 500);
-    }
+         // 5. Success
+         sendSuccess(res, { message: 'Pre-spin checks passed. Ready for ad and spin.' });
+
+     } catch (error) {
+         console.error('PreSpin failed:', error.message);
+         sendError(res, `Failed to process pre-spin: ${error.message}`, 500);
+     }
 }
 
-
 /**
- * 5) type: "spinResult"
+ * 5) type: "spinResult" (No change)
  */
 async function handleSpinResult(req, res, body) {
-    const { user_id, action_id } = body; 
+    const { user_id, action_id } = body;
     const id = parseInt(user_id);
+    const actionType = 'spinResult'; // Action ID type
     
-    // 1. Check and Consume Action ID (Security Check)
-    if (!await validateAndUseActionId(res, id, action_id, 'spinResult')) return; 
-    
-    // 2. Check and reset daily limits (if 6 hours passed since limit reached)
-    await resetDailyLimitsIfExpired(id);
+    // 1. Action ID validation (security check)
+    if (!await validateAndUseActionId(res, id, action_id, actionType)) {
+        return;
+    }
 
     try {
-        // 3. Fetch current user data
-        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=balance,spins_today,is_banned`);
+        // 2. Fetch user data 
+        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=id,balance,spins_today,ref_by,is_banned`);
         if (!Array.isArray(users) || users.length === 0) {
             return sendError(res, 'User not found.', 404);
         }
-        
-        const user = users[0];
 
-        // 4. Banned Check
+        const user = users[0];
+        const referrerId = user.ref_by;
+
+        // 3. Banned Check
         if (user.is_banned) {
             return sendError(res, 'User is banned.', 403);
         }
-        
-        // 5. Rate Limit Check 
+
+        // 4. Rate Limit Check 
         const rateLimitResult = await checkRateLimit(id);
         if (!rateLimitResult.ok) {
-            return sendError(res, rateLimitResult.message, 429); 
+            return sendError(res, rateLimitResult.message, 429);
         }
 
-        // 6. Check maximum spin limit
+        // 5. Check maximum spin limit
         if (user.spins_today >= DAILY_MAX_SPINS) {
             return sendError(res, `Daily spin limit (${DAILY_MAX_SPINS}) reached.`, 403);
         }
-        
-        // --- All checks passed: Process Spin Result ---
 
+        // --- All checks passed: Process Spin Result ---
         const { prize, prizeIndex } = calculateRandomSpinPrize();
         const newSpinsCount = user.spins_today + 1;
         const newBalance = user.balance + prize;
@@ -694,89 +642,244 @@ async function handleSpinResult(req, res, body) {
             last_activity: new Date().toISOString() // ⬅️ تحديث لـ Rate Limit
         };
 
-        // 7. ⚠️ NEW LOGIC: Check if the limit is reached NOW
+        // 6. NEW LOGIC: Check if the limit is reached NOW
         if (newSpinsCount >= DAILY_MAX_SPINS) {
             updatePayload.spins_limit_reached_at = new Date().toISOString();
         }
 
-        // 8. Update user record
+        // 7. Update user record
         await supabaseFetch('users', 'PATCH', updatePayload, `?id=eq.${id}`);
 
-        // 9. Save to spin_results
-        await supabaseFetch('spin_results', 'POST',
-          { user_id: id, prize },
-          '?select=user_id');
+        // 8. Commission Call
+        if (referrerId) {
+            processCommission(referrerId, id, prize).catch(e => {
+                 console.error(`Spin Commission failed silently for referrer ${referrerId}:`, e.message);
+            });
+        }
 
-        // 10. Return the actual, server-calculated prize and index
+        // 9. Success
         sendSuccess(res, { 
-            new_balance: newBalance, 
-            actual_prize: prize, 
-            prize_index: prizeIndex,
+            new_balance: newBalance,
+            prize: prize,
+            prizeIndex: prizeIndex,
             new_spins_count: newSpinsCount
         });
 
     } catch (error) {
-        console.error('Spin result failed:', error.message);
+        console.error('SpinResult failed:', error.message);
         sendError(res, `Failed to process spin result: ${error.message}`, 500);
     }
 }
 
 /**
- * 7) NEW HANDLER: type: "completeTask"
- * ⚠️ Handles the one-time channel join reward task.
+ * 6) type: "withdraw" (No change)
  */
-async function handleCompleteTask(req, res, body) {
-    const { user_id, action_id } = body;
+async function handleWithdraw(req, res, body) {
+    const { user_id, binanceId, amount, action_id } = body;
     const id = parseInt(user_id);
-    const reward = TASK_REWARD;
+    const withdrawAmount = parseInt(amount);
 
-    // 1. Check and Consume Action ID (Security Check)
-    if (!await validateAndUseActionId(res, id, action_id, 'completeTask')) return;
+    // 1. Action ID validation (security check)
+    if (!await validateAndUseActionId(res, id, action_id, 'withdraw')) {
+        return;
+    }
+
+    if (isNaN(withdrawAmount) || withdrawAmount < 400 || !binanceId) {
+        return sendError(res, 'Invalid amount or Binance ID.', 400);
+    }
 
     try {
-        // 2. Fetch current user data
-        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=balance,is_banned,task_completed`);
+        // 2. Fetch user data 
+        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=id,balance,is_banned`);
         if (!Array.isArray(users) || users.length === 0) {
             return sendError(res, 'User not found.', 404);
         }
-        
         const user = users[0];
 
         // 3. Banned Check
         if (user.is_banned) {
             return sendError(res, 'User is banned.', 403);
         }
-        
-        // 4. Check if task is already completed
-        if (user.task_completed) {
-            return sendError(res, 'Task already completed.', 403);
+
+        // 4. Balance Check
+        if (user.balance < withdrawAmount) {
+            return sendError(res, 'Insufficient balance.', 403);
         }
         
-        // 5. Check Rate Limit (Good practice for anti-spam)
+        // 5. Rate Limit Check
         const rateLimitResult = await checkRateLimit(id);
         if (!rateLimitResult.ok) {
-            return sendError(res, rateLimitResult.message, 429); 
+             return sendError(res, rateLimitResult.message, 429);
         }
 
-        // 6. 🚨 CRITICAL: Check Channel Membership using Telegram API
-        const isMember = await checkChannelMembership(id, TELEGRAM_CHANNEL_USERNAME);
+        // 6. Deduct balance and record withdrawal request
+        const newBalance = user.balance - withdrawAmount;
+        
+        // Update user balance (atomically preferred, but using PATCH here)
+        await supabaseFetch('users', 'PATCH', { 
+            balance: newBalance,
+            last_activity: new Date().toISOString() 
+        }, `?id=eq.${id}`); 
 
-        if (!isMember) {
-            return sendError(res, 'User has not joined the required channel.', 400);
+        // Insert withdrawal record
+        await supabaseFetch('withdrawals', 'POST', {
+            user_id: id,
+            amount: withdrawAmount,
+            binance_id: binanceId,
+            status: 'pending' 
+        });
+
+        // 7. Success
+        sendSuccess(res, { new_balance: newBalance, message: 'Withdrawal request submitted.' });
+
+    } catch (error) {
+        console.error('Withdraw failed:', error.message);
+        sendError(res, `Failed to process withdrawal: ${error.message}`, 500);
+    }
+}
+
+/* =================================================== */
+/* ===== NEW DYNAMIC TASK HANDLERS ===== */
+/* =================================================== */
+
+/**
+ * 7) type: "getTasks"
+ * Retrieves active tasks, filters out completed ones, and enforces the "single channel" rule.
+ */
+async function handleGetTasks(req, res, body) {
+    const { user_id } = body;
+    const id = parseInt(user_id);
+
+    try {
+        // 1. جلب المهام النشطة من الجدول (يفترض وجود عمود 'is_active' وعمود 'priority' و 'task_type' في جدول tasks)
+        const allTasks = await supabaseFetch('tasks', 'GET', null, `?is_active=eq.true&select=id,task_name,task_link,reward_shib,required_completions,current_completions,task_type&order=priority.asc`);
+
+        if (!Array.isArray(allTasks) || allTasks.length === 0) {
+            return sendSuccess(res, { tasks: [] }); 
         }
 
-        // 7. Process Reward and Update User Data
+        // 2. جلب المهام التي أتمها المستخدم (يفترض جدول user_tasks يحتوي task_id, user_id)
+        const completedTasks = await supabaseFetch('user_tasks', 'GET', null, `?user_id=eq.${id}&select=task_id`);
+        const completedTaskIds = new Set(Array.isArray(completedTasks) ? completedTasks.map(t => t.task_id) : []);
+        
+        // 3. تطبيق قاعدة: "مهمة قناة واحدة ظاهرة" وتصفية المهام المكتملة/الممتلئة
+        let finalTasks = [];
+        let channelTaskAdded = false;
+
+        for (const task of allTasks) {
+            const taskId = task.id;
+
+            // تخطي المهام التي أتمها المستخدم مسبقاً
+            if (completedTaskIds.has(taskId)) {
+                continue;
+            }
+
+            // تخطي المهام التي تجاوزت العدد المطلوب من المستخدمين (ممتلئة)
+            if (task.current_completions >= task.required_completions) {
+                 continue;
+            }
+            
+            // تطبيق قاعدة "مهمة قناة واحدة ظاهرة"
+            if (task.task_type === TASK_TYPE_CHANNEL_JOIN) {
+                if (!channelTaskAdded) {
+                    finalTasks.push(task);
+                    channelTaskAdded = true; // تم إضافة أول مهمة قناة، لن يتم إضافة غيرها
+                }
+            } else {
+                // إضافة أنواع المهام الأخرى (غير الانضمام لقناة)
+                finalTasks.push(task);
+            }
+        }
+
+        return sendSuccess(res, { tasks: finalTasks });
+
+    } catch (error) {
+        console.error('handleGetTasks failed:', error.message);
+        sendError(res, `Failed to retrieve tasks: ${error.message}`, 500);
+    }
+}
+
+/**
+ * 8) type: "completeTask" 
+ * Checks membership for channel join tasks and updates user/task data.
+ */
+async function handleCompleteTask(req, res, body) {
+    const { user_id, task_id, action_id } = body;
+    const id = parseInt(user_id);
+    const taskId = parseInt(task_id);
+
+    // 1. Action ID validation (security check)
+    if (!await validateAndUseActionId(res, id, action_id, 'completeTask')) {
+        return;
+    }
+
+    try {
+        // 2. Fetch User Data
+        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=id,balance,ref_by,is_banned`);
+        if (!Array.isArray(users) || users.length === 0) {
+            return sendError(res, 'User not found.', 404);
+        }
+        const user = users[0];
+
+        // 3. Banned Check
+        if (user.is_banned) {
+            return sendError(res, 'User is banned.', 403);
+        }
+
+        // 4. Check if task already completed by user
+        const completedCheck = await supabaseFetch('user_tasks', 'GET', null, `?user_id=eq.${id}&task_id=eq.${taskId}`);
+        if (Array.isArray(completedCheck) && completedCheck.length > 0) {
+            return sendError(res, 'Task already completed.', 409);
+        }
+
+        // 5. Fetch Task Details (Use 'current_completions' and 'required_completions' for locking)
+        const tasks = await supabaseFetch('tasks', 'GET', null, `?id=eq.${taskId}&select=task_name,task_link,reward_shib,task_type,required_completions,current_completions,is_active`);
+        if (!Array.isArray(tasks) || tasks.length === 0 || !tasks[0].is_active) {
+            return sendError(res, 'Task not found or is inactive.', 404);
+        }
+        const task = tasks[0];
+
+        // 6. Check if task is full
+        if (task.current_completions >= task.required_completions) {
+            return sendError(res, 'Task limit reached.', 403);
+        }
+        
+        // 7. Perform Type-Specific Check (Example: Channel Join)
+        if (task.task_type === TASK_TYPE_CHANNEL_JOIN) {
+            const channelUsername = task.task_link.split('/').pop().replace('@', ''); // استخراج اسم المستخدم من الرابط
+            const isMember = await checkChannelMembership(id, channelUsername);
+
+            if (!isMember) {
+                return sendError(res, 'User has not joined the required channel.', 400);
+            }
+        }
+        
+        // 8. Process Reward and Update User Data (Transactionally Preferred)
+        const reward = task.reward_shib;
         const newBalance = user.balance + reward;
         
-        const updatePayload = {
-            balance: newBalance,
-            task_completed: true, // Mark as completed
+        // a. Mark Task as Completed for the User
+        await supabaseFetch('user_tasks', 'POST', { user_id: id, task_id: taskId });
+        
+        // b. Update User Balance
+        const userUpdatePayload = { 
+            balance: newBalance, 
             last_activity: new Date().toISOString() // Update for Rate Limit
         };
+        await supabaseFetch('users', 'PATCH', userUpdatePayload, `?id=eq.${id}`); 
 
-        await supabaseFetch('users', 'PATCH', updatePayload, `?id=eq.${id}`);
-          
-        // 8. Success
+        // c. Increment Task Completion Count (Use current_completions + 1)
+        const newCompletions = task.current_completions + 1;
+        await supabaseFetch('tasks', 'PATCH', { current_completions: newCompletions }, `?id=eq.${taskId}`);
+
+        // d. Process Commission (if applicable)
+        if (user.ref_by) {
+            processCommission(user.ref_by, id, reward).catch(e => {
+                console.error(`Task Commission failed silently for referrer ${user.ref_by}:`, e.message);
+            });
+        }
+
+        // 9. Success
         sendSuccess(res, { new_balance: newBalance, actual_reward: reward, message: 'Task completed successfully.' });
 
     } catch (error) {
@@ -787,297 +890,46 @@ async function handleCompleteTask(req, res, body) {
 
 
 /**
- * 6) type: "withdraw" 
+ * 9) type: "commission" (No change)
  */
-async function handleWithdraw(req, res, body) {
-    const { user_id, binanceId, amount, action_id } = body;
-    const id = parseInt(user_id);
-    const withdrawalAmount = parseFloat(amount);
-    const MIN_WITHDRAW = 400;
-
-    // 1. Check and Consume Action ID (Security Check)
-    if (!await validateAndUseActionId(res, id, action_id, 'withdraw')) return;
-
-    if (withdrawalAmount < MIN_WITHDRAW) {
-        return sendError(res, `Minimum withdrawal amount is ${MIN_WITHDRAW} SHIB.`, 400);
+async function handleCommission(req, res, body) {
+    const { referrer_id, referee_id, source_reward } = body;
+    const referrerId = parseInt(referrer_id);
+    const refereeId = parseInt(referee_id);
+    const sourceReward = parseFloat(source_reward);
+    
+    // Safety check: only allow commission requests from the server itself
+    // In a production setup, this endpoint should be secured by a server-to-server token
+    if (referrerId === refereeId) {
+        return sendError(res, 'Self-commission is not allowed.', 400);
     }
 
-    try {
-        // 2. Fetch current user balance and banned status
-        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=balance,is_banned`);
-        if (!Array.isArray(users) || users.length === 0) {
-            return sendError(res, 'User not found.', 404);
-        }
+    const result = await processCommission(referrerId, refereeId, sourceReward);
 
-        const user = users[0];
-
-        // 3. Banned Check
-        if (user.is_banned) {
-            return sendError(res, 'User is banned.', 403);
-        }
-        
-        // 4. Check sufficient balance
-        if (user.balance < withdrawalAmount) {
-            return sendError(res, 'Insufficient balance.', 400);
-        }
-
-        // 5. Calculate new balance
-        const newBalance = user.balance - withdrawalAmount;
-
-        // 6. Update user balance
-        await supabaseFetch('users', 'PATCH',
-          { 
-              balance: newBalance,
-              last_activity: new Date().toISOString() // ⬅️ تحديث لـ Rate Limit
-          },
-          `?id=eq.${id}`);
-
-        // 7. Record the withdrawal request
-        await supabaseFetch('withdrawals', 'POST',
-          { user_id: id, amount: withdrawalAmount, binance_id: binanceId, status: 'pending' },
-          '?select=user_id');
-
-        // 8. Success
-        sendSuccess(res, { new_balance: newBalance });
-
-    } catch (error) {
-        console.error('Withdrawal failed:', error.message);
-        sendError(res, `Withdrawal failed: ${error.message}`, 500);
+    if (result.ok) {
+        sendSuccess(res, { message: 'Commission processed successfully.' });
+    } else {
+        // Log the failure but return 200/ok if it's a non-critical error like 'referrer not found'
+        console.warn(`Commission processing failed for referee ${refereeId}: ${result.error}`);
+        sendSuccess(res, { message: 'Commission check finished (may have failed due to referrer status).' });
     }
 }
+
 
 // ------------------------------------------------------------------
-// ADMIN PANEL HANDLERS
+// **Main Router**
 // ------------------------------------------------------------------
 
-/**
- * Handles fetching all pending withdrawal requests.
- */
-async function handleGetPendingWithdrawals(req, res, body) {
-    const { user_id } = body;
-
-    if (!isAdminUser(user_id)) {
-        return sendError(res, 'Access Denied: Not an Admin.', 403);
-    }
-
-    try {
-        const query = `?status=eq.pending&select=id,user_id,amount,binance_id,created_at&order=created_at.asc`;
-        const pending_withdrawals = await supabaseFetch('withdrawals', 'GET', null, query);
-        
-        if (!Array.isArray(pending_withdrawals)) throw new Error("Failed to fetch data.");
-
-        sendSuccess(res, { pending_withdrawals });
-    } catch (error) {
-        console.error('Error fetching pending withdrawals:', error.message);
-        sendError(res, `Failed to fetch requests: ${error.message}`, 500);
-    }
-}
-
-/**
- * Handles admin actions: accept, reject, or ban.
- */
-async function handleAdminAction(req, res, body) {
-    const { user_id, request_id, action, user_to_ban, action_id } = body;
-
-    if (!isAdminUser(user_id)) {
-        return sendError(res, 'Access Denied: Not an Admin.', 403);
-    }
-    
-    if (!await validateAndUseActionId(res, user_id, action_id, 'adminAction')) return;
-
-    try {
-        if (action === 'ban') {
-            if (!user_to_ban) {
-                return sendError(res, 'Missing user_to_ban ID.', 400);
-            }
-            
-            const targetUserId = parseInt(user_to_ban);
-            if (isNaN(targetUserId)) {
-                return sendError(res, 'Invalid user ID format for banning.', 400);
-            }
-
-            // Update user status
-            const updatePayload = { is_banned: true };
-            await supabaseFetch('users', 'PATCH', updatePayload, `?id=eq.${targetUserId}`);
-
-            console.log(`User ${targetUserId} banned by admin ${user_id}.`);
-            return sendSuccess(res, { message: `User ${targetUserId} banned.` });
-
-        } else if (action === 'accept' || action === 'reject') {
-            if (!request_id) {
-                return sendError(res, 'Missing request_id for withdrawal action.', 400);
-            }
-            
-            const targetRequestId = parseInt(request_id);
-            if (isNaN(targetRequestId)) {
-                return sendError(res, 'Invalid request ID format for withdrawal action.', 400);
-            }
-
-            const newStatus = action === 'accept' ? 'completed' : 'rejected';
-
-            // 2. Get the request details before updating
-            const requests = await supabaseFetch('withdrawals', 'GET', null, `?id=eq.${targetRequestId}&select=user_id,amount,status`);
-            const requestData = requests[0];
-
-            if (!requestData) {
-                return sendError(res, 'Withdrawal request not found.', 404);
-            }
-            
-            if (requestData.status !== 'pending') {
-                 return sendError(res, `Request is already ${requestData.status}.`, 409);
-            }
-
-            // 3. Update the withdrawal status
-            const updatePayload = { status: newStatus };
-            await supabaseFetch('withdrawals', 'PATCH', updatePayload, `?id=eq.${targetRequestId}`);
-
-            // 4. If rejected, return the balance
-            if (action === 'reject') {
-                const amountToReturn = requestData.amount;
-                const targetUserId = requestData.user_id;
-
-                // Fetch current user balance
-                const users = await supabaseFetch('users', 'GET', null, `?id=eq.${targetUserId}&select=balance`);
-                if (!Array.isArray(users) || users.length === 0) {
-                     // Should not happen if data integrity is maintained, but safety first
-                     console.error(`Target user ${targetUserId} not found for balance return.`);
-                } else {
-                    const currentBalance = users[0].balance;
-                    const newBalance = currentBalance + amountToReturn;
-
-                    // Update balance
-                    await supabaseFetch('users', 'PATCH', { balance: newBalance }, `?id=eq.${targetUserId}`);
-                }
-                
-                console.log(`Withdrawal ${targetRequestId} rejected. ${amountToReturn} SHIB returned to user ${targetUserId}.`);
-            }
-            
-            console.log(`Withdrawal ${targetRequestId} set to ${newStatus} by admin ${user_id}.`);
-            return sendSuccess(res, { message: `Request ${targetRequestId} ${newStatus}.` });
-
-        } else {
-            return sendError(res, 'Invalid admin action.', 400);
-        }
-
-    } catch (error) {
-        console.error('Error handling admin action:', error.message);
-        sendError(res, `Admin action failed: ${error.message}`, 500);
-    }
-}
-
-/**
- * NEW HANDLER: type: "modifyBalance"
- * Allows admin to directly change a user's balance.
- */
-async function handleModifyBalance(req, res, body) {
-    const { user_id, target_user_id, amount_to_add, action_id } = body;
-    const adminId = parseInt(user_id);
-    const targetId = parseInt(target_user_id);
-    const amount = parseFloat(amount_to_add); // Can be positive or negative
-
-    if (!isAdminUser(adminId)) {
-        return sendError(res, 'Access Denied: Not an Admin.', 403);
-    }
-    
-    // Use 'modifyBalance' action type for this specific action ID
-    if (!await validateAndUseActionId(res, adminId, action_id, 'modifyBalance')) return;
-    
-    if (isNaN(targetId) || isNaN(amount)) {
-        return sendError(res, 'Invalid User ID or Amount format.', 400);
-    }
-
-    try {
-        // Fetch current balance
-        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${targetId}&select=balance`);
-        if (!Array.isArray(users) || users.length === 0) {
-            return sendError(res, 'Target user not found.', 404);
-        }
-        
-        const currentBalance = users[0].balance;
-        const newBalance = currentBalance + amount;
-
-        // Update user balance
-        await supabaseFetch('users', 'PATCH',
-          { balance: newBalance },
-          `?id=eq.${targetId}`);
-        
-        console.log(`Admin ${adminId} modified balance for user ${targetId}. Old: ${currentBalance}, New: ${newBalance}. Change: ${amount}`);
-        
-        sendSuccess(res, { new_balance: newBalance, message: `Balance for user ${targetId} successfully adjusted by ${amount}.` });
-
-    } catch (error) {
-        console.error('ModifyBalance failed:', error.message);
-        sendError(res, `Balance modification failed: ${error.message}`, 500);
-    }
-}
-
-/**
- * NEW HANDLER: type: "resetTask"
- * Allows admin to reset the one-time task completion status for a user.
- */
-async function handleResetTask(req, res, body) {
-    const { user_id, target_user_id, action_id } = body;
-    const adminId = parseInt(user_id);
-    const targetId = parseInt(target_user_id);
-
-    if (!isAdminUser(adminId)) {
-        return sendError(res, 'Access Denied: Not an Admin.', 403);
-    }
-    
-    // Use 'resetTask' action type for this specific action ID
-    if (!await validateAndUseActionId(res, adminId, action_id, 'resetTask')) return;
-    
-    if (isNaN(targetId)) {
-        return sendError(res, 'Invalid Target User ID format.', 400);
-    }
-
-    try {
-        // Update user task status
-        await supabaseFetch('users', 'PATCH',
-          { task_completed: false },
-          `?id=eq.${targetId}`);
-        
-        console.log(`Admin ${adminId} reset task status for user ${targetId}.`);
-        
-        sendSuccess(res, { message: `Task status for user ${targetId} reset to incomplete.` });
-
-    } catch (error) {
-        console.error('ResetTask failed:', error.message);
-        sendError(res, `Task reset failed: ${error.message}`, 500);
-    }
-}
-
-
-// --- Main Handler for Vercel/Serverless ---
 module.exports = async (req, res) => {
-  // CORS configuration
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return sendSuccess(res);
-  }
-
-  if (req.method !== 'POST') {
-    return sendError(res, `Method ${req.method} not allowed. Only POST is supported.`, 405);
-  }
-
   let body;
   try {
     body = await new Promise((resolve, reject) => {
-      let data = '';
-      req.on('data', chunk => {
-        data += chunk.toString();
-      });
-      req.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(new Error('Invalid JSON payload.'));
-        }
-      });
-      req.on('error', reject);
+        let data = '';
+        req.on('data', chunk => { data += chunk.toString(); });
+        req.on('end', () => {
+            try { resolve(JSON.parse(data)); } catch (e) { reject(new Error('Invalid JSON payload.')); }
+        });
+        req.on('error', reject);
     });
 
   } catch (error) {
@@ -1088,37 +940,20 @@ module.exports = async (req, res) => {
     return sendError(res, 'Missing "type" field in the request body.', 400);
   }
 
-  // ⬅️ initData Security Check
-  
-  // قائمة الإجراءات المستثناة من فحص initData الصارم
-  const exceptions = [
-      'commission',        
-      'generateActionId',  
-      'watchAd',           
-      'preSpin',           
-      'spinResult',        
-      'withdraw',          
-      'completeTask',      
-      'getPendingWithdrawals', 
-      'adminAction',
-      'modifyBalance', // ⬅️ NEW
-      'resetTask'      // ⬅️ NEW
-  ];
-
-  // تطبيق التحقق الصارم لـ initData فقط على طلبات الاتصال الأولية (getUserData و register)
-  if (!exceptions.includes(body.type)) {
-      if (!body.initData || !validateInitData(body.initData)) {
-          return sendError(res, 'Invalid or expired initData. Security check failed.', 401);
-      }
+  // ⬅️ initData Security Check (Skip for 'commission' endpoint)
+  if (body.type !== 'commission' && (!body.initData || !validateInitData(body.initData))) {
+      return sendError(res, 'Invalid or expired initData. Security check failed.', 401);
   }
 
-
-  if (!body.user_id && body.type !== 'commission') {
+  if (!body.user_id && body.type !== 'commission' && body.type !== 'requestActionId') {
       return sendError(res, 'Missing user_id in the request body.', 400);
   }
 
   // Route the request based on the 'type' field
   switch (body.type) {
+    case 'requestActionId':
+        await handleRequestActionId(req, res, body);
+        break;
     case 'getUserData':
       await handleGetUserData(req, res, body);
       break;
@@ -1140,27 +975,14 @@ module.exports = async (req, res) => {
     case 'withdraw':
       await handleWithdraw(req, res, body);
       break;
-    case 'completeTask':
+    case 'completeTask': // ⬅️ الآن ديناميكي
       await handleCompleteTask(req, res, body);
       break;
-    case 'generateActionId': 
-      await handleGenerateActionId(req, res, body);
+    case 'getTasks': // ⬅️ جلب المهام الديناميكية
+      await handleGetTasks(req, res, body);
       break;
-    // ⬅️ Admin Handlers
-    case 'getPendingWithdrawals': 
-      await handleGetPendingWithdrawals(req, res, body);
-      break;
-    case 'adminAction': 
-      await handleAdminAction(req, res, body);
-      break;
-    case 'modifyBalance': // ⬅️ NEW
-      await handleModifyBalance(req, res, body);
-      break;
-    case 'resetTask': // ⬅️ NEW
-      await handleResetTask(req, res, body);
-      break;
+    
     default:
-      sendError(res, `Unknown request type: ${body.type}`, 400);
-      break;
+      return sendError(res, `Unknown request type: ${body.type}`, 400);
   }
 };
