@@ -864,7 +864,8 @@ async function handleGetPendingWithdrawals(req, res, body) {
     }
 
     try {
-        const query = `?status=eq.pending&select=request_id,user_id,amount,binance_id,created_at&order=created_at.asc`;
+        // ⚠️ CORRECTION: Use 'id' instead of 'request_id'
+        const query = `?status=eq.pending&select=id,user_id,amount,binance_id,created_at&order=created_at.asc`;
         const pending_withdrawals = await supabaseFetch('withdrawals', 'GET', null, query);
         
         if (!Array.isArray(pending_withdrawals)) throw new Error("Failed to fetch data.");
@@ -910,7 +911,8 @@ async function handleAdminAction(req, res, body) {
             const newStatus = action === 'accept' ? 'completed' : 'rejected';
 
             // 2. Get the request details before updating
-            const requests = await supabaseFetch('withdrawals', 'GET', null, `?request_id=eq.${request_id}&select=user_id,amount,status`);
+            // ⚠️ CORRECTION: Use 'id' instead of 'request_id'
+            const requests = await supabaseFetch('withdrawals', 'GET', null, `?id=eq.${request_id}&select=user_id,amount,status`);
             const requestData = requests[0];
 
             if (!requestData) {
@@ -923,7 +925,8 @@ async function handleAdminAction(req, res, body) {
 
             // 3. Update the withdrawal status
             const updatePayload = { status: newStatus };
-            await supabaseFetch('withdrawals', 'PATCH', updatePayload, `?request_id=eq.${request_id}`);
+            // ⚠️ CORRECTION: Use 'id' instead of 'request_id'
+            await supabaseFetch('withdrawals', 'PATCH', updatePayload, `?id=eq.${request_id}`);
 
             // 4. If rejected, return the balance
             if (action === 'reject') {
