@@ -1,4 +1,4 @@
-// /api/index.js (Final and Secure Version with Admin & Reset Logic)
+// /api/index.js (Final and Secure Version with Full Admin Controls)
 
 /**
  * SHIB Ads WebApp Backend API
@@ -40,7 +40,7 @@ const TELEGRAM_CHANNEL_USERNAME = '@botbababab'; // يجب أن يكون هذا 
  * Helper function to randomly select a prize from the defined sectors and return its index.
  */
 function calculateRandomSpinPrize() {
-    const randomIndex = Math.floor(ńst.random() * SPIN_SECTORS.length);
+    const randomIndex = Math.floor(Math.random() * SPIN_SECTORS.length);
     const prize = SPIN_SECTORS[randomIndex];
     return { prize, prizeIndex: randomIndex };
 }
@@ -441,8 +441,10 @@ async function handleGetUserData(req, res, body) {
         const users = await supabaseFetch('users', 'GET', null, `?id=eq.${id}&select=balance,ads_watched_today,spins_today,is_banned,ref_by,ads_limit_reached_at,spins_limit_reached_at,task_completed`);
 
         if (!users || users.length === 0 || users.success) {
-            return sendSuccess(res, {
-                balance: 0, ads_watched_today: 0, spins_today: 0, referrals_count: 0, withdrawal_history: [], is_banned: false, task_completed: false, is_admin: false
+            // Check admin status for non-existent users too (in case admin opens the panel before registering)
+             const is_admin_check = isAdminUser(user_id);
+             return sendSuccess(res, {
+                balance: 0, ads_watched_today: 0, spins_today: 0, referrals_count: 0, withdrawal_history: [], is_banned: false, task_completed: false, is_admin: is_admin_check
             });
         }
 
@@ -845,7 +847,7 @@ async function handleWithdraw(req, res, body) {
 }
 
 // ------------------------------------------------------------------
-// NEW: Admin Panel Handlers
+// ADMIN PANEL HANDLERS
 // ------------------------------------------------------------------
 
 /**
@@ -859,7 +861,6 @@ async function handleGetPendingWithdrawals(req, res, body) {
     }
 
     try {
-        // ⚠️ Correction: Use 'id' instead of 'request_id'
         const query = `?status=eq.pending&select=id,user_id,amount,binance_id,created_at&order=created_at.asc`;
         const pending_withdrawals = await supabaseFetch('withdrawals', 'GET', null, query);
         
@@ -874,7 +875,6 @@ async function handleGetPendingWithdrawals(req, res, body) {
 
 /**
  * Handles admin actions: accept, reject, or ban.
- * 🚨 CORRECTION: Handling missing request_id/user_to_ban gracefully based on action type.
  */
 async function handleAdminAction(req, res, body) {
     const { user_id, request_id, action, user_to_ban, action_id } = body;
@@ -883,17 +883,15 @@ async function handleAdminAction(req, res, body) {
         return sendError(res, 'Access Denied: Not an Admin.', 403);
     }
     
-    // 1. Action ID validation
     if (!await validateAndUseActionId(res, user_id, action_id, 'adminAction')) return;
 
     try {
         if (action === 'ban') {
-            // 🚨 CORRECTION: Ensure user_to_ban is valid before attempting to parse it
             if (!user_to_ban) {
                 return sendError(res, 'Missing user_to_ban ID.', 400);
             }
             
-            const targetUserId = parseInt(user_to_ban); // Convert to number
+            const targetUserId = parseInt(user_to_ban);
             if (isNaN(targetUserId)) {
                 return sendError(res, 'Invalid user ID format for banning.', 400);
             }
@@ -906,12 +904,11 @@ async function handleAdminAction(req, res, body) {
             return sendSuccess(res, { message: `User ${targetUserId} banned.` });
 
         } else if (action === 'accept' || action === 'reject') {
-            // 🚨 CORRECTION: Ensure request_id is valid before attempting to parse it
             if (!request_id) {
                 return sendError(res, 'Missing request_id for withdrawal action.', 400);
             }
             
-            const targetRequestId = parseInt(request_id); // Convert to number
+            const targetRequestId = parseInt(request_id);
             if (isNaN(targetRequestId)) {
                 return sendError(res, 'Invalid request ID format for withdrawal action.', 400);
             }
@@ -919,7 +916,6 @@ async function handleAdminAction(req, res, body) {
             const newStatus = action === 'accept' ? 'completed' : 'rejected';
 
             // 2. Get the request details before updating
-            // ⚠️ Correction: Use 'id' instead of 'request_id'
             const requests = await supabaseFetch('withdrawals', 'GET', null, `?id=eq.${targetRequestId}&select=user_id,amount,status`);
             const requestData = requests[0];
 
@@ -933,7 +929,6 @@ async function handleAdminAction(req, res, body) {
 
             // 3. Update the withdrawal status
             const updatePayload = { status: newStatus };
-            // ⚠️ Correction: Use 'id' instead of 'request_id'
             await supabaseFetch('withdrawals', 'PATCH', updatePayload, `?id=eq.${targetRequestId}`);
 
             // 4. If rejected, return the balance
@@ -943,11 +938,16 @@ async function handleAdminAction(req, res, body) {
 
                 // Fetch current user balance
                 const users = await supabaseFetch('users', 'GET', null, `?id=eq.${targetUserId}&select=balance`);
-                const currentBalance = users[0].balance;
-                const newBalance = currentBalance + amountToReturn;
+                if (!Array.isArray(users) || users.length === 0) {
+                     // Should not happen if data integrity is maintained, but safety first
+                     console.error(`Target user ${targetUserId} not found for balance return.`);
+                } else {
+                    const currentBalance = users[0].balance;
+                    const newBalance = currentBalance + amountToReturn;
 
-                // Update balance
-                await supabaseFetch('users', 'PATCH', { balance: newBalance }, `?id=eq.${targetUserId}`);
+                    // Update balance
+                    await supabaseFetch('users', 'PATCH', { balance: newBalance }, `?id=eq.${targetUserId}`);
+                }
                 
                 console.log(`Withdrawal ${targetRequestId} rejected. ${amountToReturn} SHIB returned to user ${targetUserId}.`);
             }
@@ -962,6 +962,88 @@ async function handleAdminAction(req, res, body) {
     } catch (error) {
         console.error('Error handling admin action:', error.message);
         sendError(res, `Admin action failed: ${error.message}`, 500);
+    }
+}
+
+/**
+ * NEW HANDLER: type: "modifyBalance"
+ * Allows admin to directly change a user's balance.
+ */
+async function handleModifyBalance(req, res, body) {
+    const { user_id, target_user_id, amount_to_add, action_id } = body;
+    const adminId = parseInt(user_id);
+    const targetId = parseInt(target_user_id);
+    const amount = parseFloat(amount_to_add); // Can be positive or negative
+
+    if (!isAdminUser(adminId)) {
+        return sendError(res, 'Access Denied: Not an Admin.', 403);
+    }
+    
+    // Use 'modifyBalance' action type for this specific action ID
+    if (!await validateAndUseActionId(res, adminId, action_id, 'modifyBalance')) return;
+    
+    if (isNaN(targetId) || isNaN(amount)) {
+        return sendError(res, 'Invalid User ID or Amount format.', 400);
+    }
+
+    try {
+        // Fetch current balance
+        const users = await supabaseFetch('users', 'GET', null, `?id=eq.${targetId}&select=balance`);
+        if (!Array.isArray(users) || users.length === 0) {
+            return sendError(res, 'Target user not found.', 404);
+        }
+        
+        const currentBalance = users[0].balance;
+        const newBalance = currentBalance + amount;
+
+        // Update user balance
+        await supabaseFetch('users', 'PATCH',
+          { balance: newBalance },
+          `?id=eq.${targetId}`);
+        
+        console.log(`Admin ${adminId} modified balance for user ${targetId}. Old: ${currentBalance}, New: ${newBalance}. Change: ${amount}`);
+        
+        sendSuccess(res, { new_balance: newBalance, message: `Balance for user ${targetId} successfully adjusted by ${amount}.` });
+
+    } catch (error) {
+        console.error('ModifyBalance failed:', error.message);
+        sendError(res, `Balance modification failed: ${error.message}`, 500);
+    }
+}
+
+/**
+ * NEW HANDLER: type: "resetTask"
+ * Allows admin to reset the one-time task completion status for a user.
+ */
+async function handleResetTask(req, res, body) {
+    const { user_id, target_user_id, action_id } = body;
+    const adminId = parseInt(user_id);
+    const targetId = parseInt(target_user_id);
+
+    if (!isAdminUser(adminId)) {
+        return sendError(res, 'Access Denied: Not an Admin.', 403);
+    }
+    
+    // Use 'resetTask' action type for this specific action ID
+    if (!await validateAndUseActionId(res, adminId, action_id, 'resetTask')) return;
+    
+    if (isNaN(targetId)) {
+        return sendError(res, 'Invalid Target User ID format.', 400);
+    }
+
+    try {
+        // Update user task status
+        await supabaseFetch('users', 'PATCH',
+          { task_completed: false },
+          `?id=eq.${targetId}`);
+        
+        console.log(`Admin ${adminId} reset task status for user ${targetId}.`);
+        
+        sendSuccess(res, { message: `Task status for user ${targetId} reset to incomplete.` });
+
+    } catch (error) {
+        console.error('ResetTask failed:', error.message);
+        sendError(res, `Task reset failed: ${error.message}`, 500);
     }
 }
 
@@ -1008,17 +1090,19 @@ module.exports = async (req, res) => {
 
   // ⬅️ initData Security Check
   
-  // قائمة الإجراءات المستثناة من فحص initData الصارم، لأنها محمية بآلية Action ID أو Rate Limit أو لا تحتاج initData أصلاً
+  // قائمة الإجراءات المستثناة من فحص initData الصارم
   const exceptions = [
-      'commission',        // لا تحتاج initData (عملية خادم-خادم)
-      'generateActionId',  // محمي بـ Rate Limit
-      'watchAd',           // محمي بـ Action ID
-      'preSpin',           // محمي بـ Action ID
-      'spinResult',        // محمي بـ Action ID
-      'withdraw',          // محمي بـ Action ID
-      'completeTask',      // محمي بـ Action ID
-      'getPendingWithdrawals', // محمي بـ isAdminUser
-      'adminAction'        // محمي بـ Action ID و isAdminUser
+      'commission',        
+      'generateActionId',  
+      'watchAd',           
+      'preSpin',           
+      'spinResult',        
+      'withdraw',          
+      'completeTask',      
+      'getPendingWithdrawals', 
+      'adminAction',
+      'modifyBalance', // ⬅️ NEW
+      'resetTask'      // ⬅️ NEW
   ];
 
   // تطبيق التحقق الصارم لـ initData فقط على طلبات الاتصال الأولية (getUserData و register)
@@ -1056,18 +1140,24 @@ module.exports = async (req, res) => {
     case 'withdraw':
       await handleWithdraw(req, res, body);
       break;
-    case 'completeTask': // ⬅️ NEW: Handle the new task logic
+    case 'completeTask':
       await handleCompleteTask(req, res, body);
       break;
     case 'generateActionId': 
       await handleGenerateActionId(req, res, body);
       break;
-    // ⬅️ NEW: Admin Handlers
+    // ⬅️ Admin Handlers
     case 'getPendingWithdrawals': 
       await handleGetPendingWithdrawals(req, res, body);
       break;
     case 'adminAction': 
       await handleAdminAction(req, res, body);
+      break;
+    case 'modifyBalance': // ⬅️ NEW
+      await handleModifyBalance(req, res, body);
+      break;
+    case 'resetTask': // ⬅️ NEW
+      await handleResetTask(req, res, body);
       break;
     default:
       sendError(res, `Unknown request type: ${body.type}`, 400);
