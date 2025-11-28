@@ -7,7 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght~400;700&display=swap'); 
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;800;900&display=swap'); 
 
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Vazirmatn', Arial, Helvetica, sans-serif;overflow:hidden;background: #0d0c1d;}
@@ -163,145 +163,123 @@
         .nav-button.withdraw-btn-nav:hover{box-shadow:0 6px 0 #991919,0 10px 15px rgba(0,0,0,.2)}
         .nav-button.withdraw-btn-nav:active{box-shadow:0 3px 0 #991919,0 5px 8px rgba(0,0,0,.15)}
 
-        /* ===== Task Screen - REVISED STYLING (High Fidelity) ===== */
+        /* ===== Task Screen - NEW STYLING (Matching the provided image) ===== */
         .task-screen{
             display:flex;
             flex-direction:column;
             align-items:center;
-            justify-content: flex-start; /* Align content to the top */
-            padding-top: 50px; /* Add padding to the top */
-            padding-bottom: 120px; 
-            overflow-y: auto;
-            background: #f0f4f8; /* Very light, professional background */
-        }
-        .task-header{ 
-            text-align: center;
-            margin-bottom: 30px;
-            width: 100%;
-            max-width: 320px;
-        }
-        .task-title{ 
-             font-family: 'Vazirmatn', sans-serif; 
-             font-size:28px; /* Slightly larger title */
-             color:#2c3e50; /* Darker, more professional color */
-             font-weight:800; /* Extra bold */
-             text-shadow: 1px 1px 2px rgba(0,0,0,0.05); 
-        }
-        /* task-description is removed from HTML, but style kept for safety */
-        .task-description{
-            font-size: 16px;
-            color: #555; 
-            margin-top: 5px;
+            justify-content: flex-start; 
+            padding-top: 0; 
+            padding-bottom: 0; 
+            overflow-y: hidden; 
+            background: #f0f0f0; /* Overall light background matching the requested aesthetic */
         }
 
+        /* Container for the tasks - the white card in the image */
         .task-card-container {
-            width: 90%;
-            max-width: 350px; /* Wider card */
-            background: linear-gradient(180deg, #ffffff, #f7f9fc); /* Subtle gradient for depth */
-            padding: 25px;
-            border-radius: 25px; /* More rounded corners */
-            box-shadow: 0 10px 30px rgba(0,0,0,.15), inset 0 0 10px rgba(255, 255, 255, 0.5); /* Enhanced shadow and inner highlight */
-            border: 2px solid #e0e6ec; /* Cleaner border */
-            margin-bottom: 30px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
+            width: 90%; 
+            max-width: 380px; 
+            background: #ffffff; /* White card color */
+            border-radius: 20px; /* Rounded corners */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); /* Soft shadow for depth */
+            margin-top: 50px; 
+            padding: 30px 25px; 
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; 
+            overflow-y: auto; 
         }
-        .task-card-container::before {
-            content: '⭐';
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            font-size: 50px;
-            opacity: 0.1;
-            transform: rotate(15deg);
+        
+        .task-title-image { 
+             font-family: 'Vazirmatn', sans-serif; 
+             font-size: 30px; 
+             color: #333333; 
+             font-weight: 700; /* Bold title */
+             margin-bottom: 30px; 
+             align-self: flex-start; 
+             text-align: right; /* Ensure Arabic title is correct */
+             width: 100%;
         }
 
-        .task-item {
-            padding: 0;
-            border: none;
-            background: transparent;
-            box-shadow: none;
-            margin-bottom: 25px;
-            display: block; 
+        /* Individual Task Item - The actual rows */
+        .task-item-image {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0; 
+            border-bottom: 1px solid #eeeeee; /* Light separator line */
         }
-        .task-info h4 {
-            color: #3498db; /* Professional blue */
-            margin-bottom: 10px;
-            font-size: 22px;
-            font-weight: 700;
+        .task-item-image:last-child {
+            border-bottom: none; 
         }
-        .task-info p {
-            color: #7f8c8d; /* Subdued text color */
-            font-size: 15px;
-            margin-bottom: 20px;
+
+        .task-name-image {
+            font-size: 16px; 
+            color: #555555; 
+            font-weight: 500; 
+            flex-grow: 1; 
+            text-align: right; /* Align text to the right for Arabic */
+            padding-left: 10px; /* Space between text and button */
             line-height: 1.4;
         }
-        .task-reward {
-            font-size: 28px; /* Larger reward text */
-            font-weight: 800;
-            color: #e67e22; /* Vivid orange */
-            font-family: 'Orbitron', sans-serif;
-            padding: 12px 20px;
-            background: #fff0e6;
-            border-radius: 15px;
-            display: inline-block;
-            margin-bottom: 25px;
-            border: 1px dashed #e67e22; /* Dashed border to look like a coupon */
-            letter-spacing: 1px;
-            box-shadow: 0 2px 5px rgba(0,0,0,.1);
-        }
-        /* START: MODIFIED TASK ACTION BUTTON STYLE (TO BLUE 3D PUSH) */
-        .task-action-btn {
-            background:linear-gradient(145deg, #4a90e2, #357abd); /* User requested Blue */
-            color:#fff;border:none;padding:15px 25px; /* Increased padding */
-            border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;
-            box-shadow:0 6px 0 #2c5aa0;transition:all .1s ease; /* Blue 3D shadow */
-            text-transform: uppercase;
-            width: 100%; 
-            font-family: 'Vazirmatn', sans-serif;
-            margin-top: 15px;
-        }
-        .task-action-btn:disabled {
-            background: linear-gradient(145deg, #bdc3c7, #95a5a6);
-            box-shadow: 0 6px 0 #7f8c8d;
-            cursor: not-allowed;
-            color: #ecf0f1;
-        }
-        .task-action-btn:active{transform:translateY(3px);box-shadow:0 3px 0 #2c5aa0} /* Active Blue shadow */
-        
-        .task-action-btn.completed {
-            background:linear-gradient(145deg, #95a5a6, #7f8c8d); 
-            box-shadow:0 6px 0 #6c7a89;
-            color: #ecf0f1;
-        }
-        .task-action-btn.completed:active{transform:translateY(3px);box-shadow:0 3px 0 #6c7a89}
-        /* END: MODIFIED TASK ACTION BUTTON STYLE */
-
-        /* Task Note style */
-        .task-screen .note{
-            margin-top: 25px;
-            background: #f8f8f8;
-            border-left: 5px solid #3498db;
-            padding: 15px;
-            border-radius: 10px;
+        .task-name-image strong {
+            display: block;
             font-size: 14px;
-            color: #555;
-            text-align: left;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            color: #2c3e50;
+            font-weight: 700;
+        }
+        .task-name-image span {
+            display: block;
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 3px;
         }
 
-        /* Added Back Button Style (Reusing back-btn style from withdraw/invite screens) */
-        .task-back-btn {
-            background:linear-gradient(145deg, #6c757d, #5a6268);
-            color:#fff;border:none;padding:12px 30px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;
-            box-shadow:0 5px 0 #4e555b;transition:all .1s ease;
-            width: 90%;
-            max-width: 350px;
-            margin-bottom: 20px;
+
+        /* Join Button - 3D Push Blue (Updated as requested) */
+        .join-btn-image {
+            background: linear-gradient(180deg, #66b2ff 0%, #3385ff 100%); /* Blue gradient */
+            color: #ffffff;
+            border: none;
+            padding: 8px 20px; 
+            border-radius: 8px; 
+            font-size: 15px; 
+            font-weight: bold;
+            cursor: pointer;
+            transition: all .1s ease;
+            text-transform: uppercase; 
+            min-width: 75px; 
+            line-height: 1;
+            /* 3D PUSH EFFECT - Dark shadow for depth */
+            box-shadow: 0 5px 0 #1b4d8d, 0 8px 12px rgba(0,0,0,.15); 
+            transform: translateY(0);
         }
-        .task-back-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #4e555b}
-        
+        .join-btn-image:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 0 #1b4d8d, 0 10px 15px rgba(0,0,0,.2);
+        }
+        .join-btn-image:active {
+            transform: translateY(3px); /* Push button down on click */
+            box-shadow: 0 2px 0 #1b4d8d, 0 5px 8px rgba(0,0,0,.15);
+        }
+
+        /* Disabled/Completed Join Button */
+        .join-btn-image:disabled,
+        .join-btn-image.completed {
+            background: #cccccc; 
+            color: #888888;
+            box-shadow: none; 
+            cursor: not-allowed;
+            transform: none; 
+        }
+
+        /* Hide extra elements (Note, Back Button) */
+        .task-screen .note,
+        .task-screen .task-back-btn {
+            display: none !important; 
+        }
+
         /* ===== Spin Screen ===== */
         .spin-screen{
             display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -600,7 +578,7 @@
         
         <div class="button-container">
             <button class="nav-button" onclick="watchAds()"><span>Ads</span></button>
-            <button class="nav-button task-btn" onclick="showTask()"><span>Task</span></button>
+            <button class="nav-button task-btn" onclick="showTask()"><span>TASKS</span></button>
             <button class="nav-button" onclick="showSpin()"><span>Spin</span></button>
             <button class="nav-button withdraw-btn-nav" onclick="showWithdraw()"><span>Withdraw</span></button>
             <button class="nav-button" onclick="inviteFriends()"><span>Invite</span></button>
@@ -608,28 +586,59 @@
         </div>
 
     <div class="app-screen task-screen" id="taskScreen">
+        
         <div class="task-card-container">
-             <div class="task-header">
-                <h2 class="task-title">🔥 Daily Bonus & Tasks</h2>
-            </div>
-            <div class="task-item">
-                <div class="task-info">
-                    <h4>Join Telegram Channel & Claim Reward</h4>
-                    <p>Complete this one-time task to instantly receive a welcome bonus to your balance.</p>
+            
+            <h2 class="task-title-image">TASKS</h2>
+            
+            <div class="task-item-image">
+                <div class="task-name-image">
+                    <strong>Join Telegram Channel</strong>
+                    <span>Claim your welcome bonus of 50 SHIB.</span>
                 </div>
-                <div class="task-reward">+50 SHIB</div>
+                <button class="join-btn-image" id="taskActionBtn" onclick="handleTaskAction()">
+                    Join
+                </button>
             </div>
-            <button class="task-action-btn" id="taskActionBtn" onclick="handleTaskAction()">
-                <span>Join & Claim Reward</span>
-            </button>
-            <div class="note">
-                💡 **Note:** Click the button to join the channel. Wait 5 seconds after joining, then click the button again to **'Claim Reward'**.
+
+            <div class="task-item-image">
+                <div class="task-name-image">
+                    <strong>Subscribe to Partner Channel</strong>
+                    <span>Receive 20 SHIB upon successful subscription.</span>
+                </div>
+                <button class="join-btn-image" disabled>
+                    Join
+                </button>
             </div>
+            
+            <div class="task-item-image">
+                <div class="task-name-image">
+                    <strong>Follow on X (Twitter)</strong>
+                    <span>Get 15 SHIB for a quick follow.</span>
+                </div>
+                <button class="join-btn-image" disabled>
+                    Join
+                </button>
+            </div>
+
+            <div class="task-item-image">
+                <div class="task-name-image">
+                    <strong>Visit our Official Website</strong>
+                    <span>Earn 10 SHIB for visiting the site.</span>
+                </div>
+                <button class="join-btn-image" disabled>
+                    Join
+                </button>
+            </div>
+            
+        </div>
+        
+        <div class="note">
+            💡 **Note:** Click the button to join the channel. Wait 5 seconds after joining, then click the button again to **'Claim Reward'**.
         </div>
         <button class="task-back-btn" onclick="hideTask()">Back to Main</button>
         
-        </div>
-
+    </div>
     <div class="app-screen spin-screen" id="spinScreen">
         <div id="wheelBox">
             <div class="arrow"></div>
@@ -1050,29 +1059,31 @@ You will earn 5% of the revenue from every referral you bring through ads!
 
             document.getElementById('referralsCountDisplay').textContent = referralsCount.toLocaleString();
             
-            // Task Button State Update
+            // Task Button State Update (MODIFIED to use new class)
             const taskBtn = document.getElementById('taskActionBtn');
             if (taskBtn) {
+                // Ensure the base class is always present for styling purposes
+                taskBtn.classList.remove('join-btn-3d'); // Remove old class if it somehow remains
+                taskBtn.classList.add('join-btn-image'); // Ensure new class is applied
+
                 if (taskCompleted) {
                     // State: COMPLETED
                     taskBtn.disabled = true;
-                    taskBtn.textContent = 'Task Completed (50 SHIB Claimed)';
-                    taskBtn.classList.remove('task-action-btn');
+                    taskBtn.textContent = 'Completed'; // Simplified text
                     taskBtn.classList.add('completed');
                 } else {
                     // State: NOT COMPLETED
-                    taskBtn.disabled = isProcessingTask; // Respect the processing flag
+                    taskBtn.disabled = isProcessingTask;
                     
                     if (isProcessingTask) {
                         taskBtn.textContent = 'Processing...';
                     } else if (taskActionState === 'CLAIM') {
-                        taskBtn.textContent = 'Click HERE to Claim Reward';
+                        taskBtn.textContent = 'Claim Reward'; // Simplified text
                     } else {
-                        taskBtn.textContent = 'Join & Claim Reward';
+                        taskBtn.textContent = 'Join'; // Simplified initial text
                     }
                     
                     taskBtn.classList.remove('completed');
-                    taskBtn.classList.add('task-action-btn');
                 }
             }
 
@@ -1301,7 +1312,7 @@ You will earn 5% of the revenue from every referral you bring through ads!
                 taskActionState = 'CLAIM'; 
                 updateUI(); 
                 
-                // Show an instruction alert
+                // Show an instruction alert (Re-enabled for guidance)
                 showCustomAlert('Please Join Channel', 'You must join the channel first. Click the button again (after 5 seconds) to claim your reward.', 'warning');
 
             } else if (taskActionState === 'CLAIM') {
