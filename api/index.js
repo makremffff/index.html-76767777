@@ -1,4 +1,4 @@
-// /api/index.js (Final and Secure Version with Limit-Based Reset)
+// /api/index.js (Final and Secure Version with Admin & Reset Logic)
 
 /**
  * SHIB Ads WebApp Backend API
@@ -25,6 +25,10 @@ const MIN_TIME_BETWEEN_ACTIONS_MS = 3000; // 3 seconds minimum time between watc
 const ACTION_ID_EXPIRY_MS = 60000; // 60 seconds for Action ID to be valid
 const SPIN_SECTORS = [5, 10, 15, 20, 5];
 
+// ------------------------------------------------------------------
+// NEW Admin Constant 🔑
+// ------------------------------------------------------------------
+const ADMIN_USER_ID = '7741750541'; // ⚠️ استبدل هذا بـ Telegram User ID الخاص بك. يجب أن يكون نص (string)
 // ------------------------------------------------------------------
 // NEW Task Constants
 // ------------------------------------------------------------------
@@ -137,6 +141,14 @@ async function checkChannelMembership(userId, channelUsername) {
         console.error('Network or parsing error during Telegram API call:', error.message);
         return false;
     }
+}
+
+/**
+ * Helper function to check if the user is the defined Admin.
+ */
+function isAdminUser(userId) {
+    // ⚠️ تأكد أن userId هو سلسلة نصية للمقارنة
+    return userId.toString() === ADMIN_USER_ID;
 }
 
 
@@ -326,7 +338,7 @@ function generateStrongId() {
 
 /**
  * HANDLER: type: "generateActionId"
- * The client requests an action ID before starting a critical action (ad/spin/withdraw).
+ * The client requests an action ID before starting a critical action (ad/spin/withdraw/adminAction).
  */
 async function handleGenerateActionId(req, res, body) {
     const { user_id, action_type } = body;
@@ -414,7 +426,7 @@ async function validateAndUseActionId(res, userId, actionId, actionType) {
 
 /**
  * HANDLER: type: "getUserData"
- * ⚠️ Fix: Now selects new limit columns and task_completed.
+ * ⚠️ Fix: Now includes admin check and selects new limit columns and task_completed.
  */
 async function handleGetUserData(req, res, body) {
     const { user_id } = body;
@@ -432,7 +444,7 @@ async function handleGetUserData(req, res, body) {
 
         if (!users || users.length === 0 || users.success) {
             return sendSuccess(res, {
-                balance: 0, ads_watched_today: 0, spins_today: 0, referrals_count: 0, withdrawal_history: [], is_banned: false, task_completed: false
+                balance: 0, ads_watched_today: 0, spins_today: 0, referrals_count: 0, withdrawal_history: [], is_banned: false, task_completed: false, is_admin: false
             });
         }
 
@@ -440,7 +452,7 @@ async function handleGetUserData(req, res, body) {
 
         // 3. Banned Check - Exit immediately if banned
         if (userData.is_banned) {
-             return sendSuccess(res, { is_banned: true, message: "User is banned from accessing the app." });
+             return sendSuccess(res, { is_banned: true, message: "User is banned from accessing the app.", is_admin: false });
         }
 
 
@@ -456,9 +468,13 @@ async function handleGetUserData(req, res, body) {
         await supabaseFetch('users', 'PATCH',
             { last_activity: new Date().toISOString() },
             `?id=eq.${id}&select=id`);
+            
+        // 7. Check admin status and add it to the response
+        const is_admin = isAdminUser(user_id); 
 
         sendSuccess(res, {
             ...userData,
+            is_admin, // ⬅️ إضافة حالة المسؤول
             referrals_count: referralsCount,
             withdrawal_history: withdrawalHistory
         });
@@ -833,6 +849,111 @@ async function handleWithdraw(req, res, body) {
     }
 }
 
+// ------------------------------------------------------------------
+// NEW: Admin Panel Handlers
+// ------------------------------------------------------------------
+
+/**
+ * Handles fetching all pending withdrawal requests.
+ */
+async function handleGetPendingWithdrawals(req, res, body) {
+    const { user_id } = body;
+
+    if (!isAdminUser(user_id)) {
+        return sendError(res, 'Access Denied: Not an Admin.', 403);
+    }
+
+    try {
+        const query = `?status=eq.pending&select=request_id,user_id,amount,binance_id,created_at&order=created_at.asc`;
+        const pending_withdrawals = await supabaseFetch('withdrawals', 'GET', null, query);
+        
+        if (!Array.isArray(pending_withdrawals)) throw new Error("Failed to fetch data.");
+
+        sendSuccess(res, { pending_withdrawals });
+    } catch (error) {
+        console.error('Error fetching pending withdrawals:', error.message);
+        sendError(res, `Failed to fetch requests: ${error.message}`, 500);
+    }
+}
+
+/**
+ * Handles admin actions: accept, reject, or ban.
+ */
+async function handleAdminAction(req, res, body) {
+    const { user_id, request_id, action, user_to_ban, action_id } = body;
+
+    if (!isAdminUser(user_id)) {
+        return sendError(res, 'Access Denied: Not an Admin.', 403);
+    }
+    
+    // 1. Action ID validation
+    if (!await validateAndUseActionId(res, user_id, action_id, 'adminAction')) return;
+
+    try {
+        if (action === 'ban') {
+            if (!user_to_ban) {
+                return sendError(res, 'Missing user_to_ban ID.', 400);
+            }
+            
+            // Update user status
+            const updatePayload = { is_banned: true };
+            await supabaseFetch('users', 'PATCH', updatePayload, `?id=eq.${user_to_ban}`);
+
+            console.log(`User ${user_to_ban} banned by admin ${user_id}.`);
+            return sendSuccess(res, { message: `User ${user_to_ban} banned.` });
+
+        } else if (action === 'accept' || action === 'reject') {
+            if (!request_id) {
+                return sendError(res, 'Missing request_id for withdrawal action.', 400);
+            }
+
+            const newStatus = action === 'accept' ? 'completed' : 'rejected';
+
+            // 2. Get the request details before updating
+            const requests = await supabaseFetch('withdrawals', 'GET', null, `?request_id=eq.${request_id}&select=user_id,amount,status`);
+            const requestData = requests[0];
+
+            if (!requestData) {
+                return sendError(res, 'Withdrawal request not found.', 404);
+            }
+            
+            if (requestData.status !== 'pending') {
+                 return sendError(res, `Request is already ${requestData.status}.`, 409);
+            }
+
+            // 3. Update the withdrawal status
+            const updatePayload = { status: newStatus };
+            await supabaseFetch('withdrawals', 'PATCH', updatePayload, `?request_id=eq.${request_id}`);
+
+            // 4. If rejected, return the balance
+            if (action === 'reject') {
+                const amountToReturn = requestData.amount;
+                const targetUserId = requestData.user_id;
+
+                // Fetch current user balance
+                const users = await supabaseFetch('users', 'GET', null, `?id=eq.${targetUserId}&select=balance`);
+                const currentBalance = users[0].balance;
+                const newBalance = currentBalance + amountToReturn;
+
+                // Update balance
+                await supabaseFetch('users', 'PATCH', { balance: newBalance }, `?id=eq.${targetUserId}`);
+                
+                console.log(`Withdrawal ${request_id} rejected. ${amountToReturn} SHIB returned to user ${targetUserId}.`);
+            }
+            
+            console.log(`Withdrawal ${request_id} set to ${newStatus} by admin ${user_id}.`);
+            sendSuccess(res, { message: `Request ${request_id} ${newStatus}.` });
+
+        } else {
+            return sendError(res, 'Invalid admin action.', 400);
+        }
+
+    } catch (error) {
+        console.error('Error handling admin action:', error.message);
+        sendError(res, `Admin action failed: ${error.message}`, 500);
+    }
+}
+
 
 // --- Main Handler for Vercel/Serverless ---
 module.exports = async (req, res) => {
@@ -876,15 +997,17 @@ module.exports = async (req, res) => {
 
   // ⬅️ initData Security Check (التعديل المصحح والأكثر مرونة)
   
-  // قائمة الإجراءات المستثناة من فحص initData الصارم، لأنها محمية بآلية Action ID أو Rate Limit
+  // قائمة الإجراءات المستثناة من فحص initData الصارم، لأنها محمية بآلية Action ID أو Rate Limit أو لا تحتاج initData أصلاً
   const exceptions = [
-      'commission',        
-      'generateActionId',  
-      'watchAd',           
-      'preSpin',           
-      'spinResult',        
-      'withdraw',          
-      'completeTask'       
+      'commission',        // لا تحتاج initData (عملية خادم-خادم)
+      'generateActionId',  // محمي بـ Rate Limit
+      'watchAd',           // محمي بـ Action ID
+      'preSpin',           // محمي بـ Action ID
+      'spinResult',        // محمي بـ Action ID
+      'withdraw',          // محمي بـ Action ID
+      'completeTask',      // محمي بـ Action ID
+      'getPendingWithdrawals', // محمي بـ isAdminUser
+      'adminAction'        // محمي بـ Action ID و isAdminUser
   ];
 
   // تطبيق التحقق الصارم لـ initData فقط على طلبات الاتصال الأولية (getUserData و register)
@@ -927,6 +1050,13 @@ module.exports = async (req, res) => {
       break;
     case 'generateActionId': 
       await handleGenerateActionId(req, res, body);
+      break;
+    // ⬅️ NEW: Admin Handlers
+    case 'getPendingWithdrawals': 
+      await handleGetPendingWithdrawals(req, res, body);
+      break;
+    case 'adminAction': 
+      await handleAdminAction(req, res, body);
       break;
     default:
       sendError(res, `Unknown request type: ${body.type}`, 400);
