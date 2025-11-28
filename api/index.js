@@ -40,7 +40,7 @@ const TELEGRAM_CHANNEL_USERNAME = '@botbababab'; // يجب أن يكون هذا 
  * Helper function to randomly select a prize from the defined sectors and return its index.
  */
 function calculateRandomSpinPrize() {
-    const randomIndex = Math.floor(Math.random() * SPIN_SECTORS.length);
+    const randomIndex = Math.floor(ńst.random() * SPIN_SECTORS.length);
     const prize = SPIN_SECTORS[randomIndex];
     return { prize, prizeIndex: randomIndex };
 }
@@ -154,7 +154,6 @@ function isAdminUser(userId) {
 
 /**
  * Limit-Based Reset Logic: Resets counters if the limit was reached AND the interval (6 hours) has passed since.
- * ⚠️ هذا هو التعديل الرئيسي: يعتمد على أعمدة الوصول للحد الأقصى وليس على آخر نشاط عام.
  */
 async function resetDailyLimitsIfExpired(userId) {
     const now = Date.now();
@@ -426,7 +425,6 @@ async function validateAndUseActionId(res, userId, actionId, actionType) {
 
 /**
  * HANDLER: type: "getUserData"
- * ⚠️ Fix: Now includes admin check and selects new limit columns and task_completed.
  */
 async function handleGetUserData(req, res, body) {
     const { user_id } = body;
@@ -488,7 +486,6 @@ async function handleGetUserData(req, res, body) {
 
 /**
  * 1) type: "register"
- * ⚠️ Fix: Includes task_completed: false for new users.
  */
 async function handleRegister(req, res, body) {
   const { user_id, ref_by } = body;
@@ -508,7 +505,7 @@ async function handleRegister(req, res, body) {
         ref_by: ref_by ? parseInt(ref_by) : null,
         last_activity: new Date().toISOString(), // ⬅️ يبقى هنا للـ Rate Limit فقط
         is_banned: false,
-        task_completed: false, // ⬅️ NEW: Default value for the task
+        task_completed: false, // ⬅️ Default value for the task
         // الأعمدة الجديدة ستحتوي على NULL بشكل افتراضي
       };
       await supabaseFetch('users', 'POST', newUser, '?select=id');
@@ -527,7 +524,6 @@ async function handleRegister(req, res, body) {
 
 /**
  * 2) type: "watchAd"
- * ⚠️ Fix: Updates ads_limit_reached_at when the limit is hit.
  */
 async function handleWatchAd(req, res, body) {
     const { user_id, action_id } = body;
@@ -648,7 +644,6 @@ async function handlePreSpin(req, res, body) {
 
 /**
  * 5) type: "spinResult"
- * ⚠️ Fix: Updates spins_limit_reached_at when the limit is hit.
  */
 async function handleSpinResult(req, res, body) {
     const { user_id, action_id } = body; 
@@ -790,7 +785,7 @@ async function handleCompleteTask(req, res, body) {
 
 
 /**
- * 6) type: "withdraw" (No change, only uses last_activity for rate limit check in checkRateLimit)
+ * 6) type: "withdraw" 
  */
 async function handleWithdraw(req, res, body) {
     const { user_id, binanceId, amount, action_id } = body;
@@ -864,7 +859,7 @@ async function handleGetPendingWithdrawals(req, res, body) {
     }
 
     try {
-        // ⚠️ CORRECTION: Use 'id' instead of 'request_id'
+        // ⚠️ Correction: Use 'id' instead of 'request_id'
         const query = `?status=eq.pending&select=id,user_id,amount,binance_id,created_at&order=created_at.asc`;
         const pending_withdrawals = await supabaseFetch('withdrawals', 'GET', null, query);
         
@@ -879,6 +874,7 @@ async function handleGetPendingWithdrawals(req, res, body) {
 
 /**
  * Handles admin actions: accept, reject, or ban.
+ * 🚨 CORRECTION: Handling missing request_id/user_to_ban gracefully based on action type.
  */
 async function handleAdminAction(req, res, body) {
     const { user_id, request_id, action, user_to_ban, action_id } = body;
@@ -892,27 +888,39 @@ async function handleAdminAction(req, res, body) {
 
     try {
         if (action === 'ban') {
+            // 🚨 CORRECTION: Ensure user_to_ban is valid before attempting to parse it
             if (!user_to_ban) {
                 return sendError(res, 'Missing user_to_ban ID.', 400);
             }
             
+            const targetUserId = parseInt(user_to_ban); // Convert to number
+            if (isNaN(targetUserId)) {
+                return sendError(res, 'Invalid user ID format for banning.', 400);
+            }
+
             // Update user status
             const updatePayload = { is_banned: true };
-            await supabaseFetch('users', 'PATCH', updatePayload, `?id=eq.${user_to_ban}`);
+            await supabaseFetch('users', 'PATCH', updatePayload, `?id=eq.${targetUserId}`);
 
-            console.log(`User ${user_to_ban} banned by admin ${user_id}.`);
-            return sendSuccess(res, { message: `User ${user_to_ban} banned.` });
+            console.log(`User ${targetUserId} banned by admin ${user_id}.`);
+            return sendSuccess(res, { message: `User ${targetUserId} banned.` });
 
         } else if (action === 'accept' || action === 'reject') {
+            // 🚨 CORRECTION: Ensure request_id is valid before attempting to parse it
             if (!request_id) {
                 return sendError(res, 'Missing request_id for withdrawal action.', 400);
+            }
+            
+            const targetRequestId = parseInt(request_id); // Convert to number
+            if (isNaN(targetRequestId)) {
+                return sendError(res, 'Invalid request ID format for withdrawal action.', 400);
             }
 
             const newStatus = action === 'accept' ? 'completed' : 'rejected';
 
             // 2. Get the request details before updating
-            // ⚠️ CORRECTION: Use 'id' instead of 'request_id'
-            const requests = await supabaseFetch('withdrawals', 'GET', null, `?id=eq.${request_id}&select=user_id,amount,status`);
+            // ⚠️ Correction: Use 'id' instead of 'request_id'
+            const requests = await supabaseFetch('withdrawals', 'GET', null, `?id=eq.${targetRequestId}&select=user_id,amount,status`);
             const requestData = requests[0];
 
             if (!requestData) {
@@ -925,8 +933,8 @@ async function handleAdminAction(req, res, body) {
 
             // 3. Update the withdrawal status
             const updatePayload = { status: newStatus };
-            // ⚠️ CORRECTION: Use 'id' instead of 'request_id'
-            await supabaseFetch('withdrawals', 'PATCH', updatePayload, `?id=eq.${request_id}`);
+            // ⚠️ Correction: Use 'id' instead of 'request_id'
+            await supabaseFetch('withdrawals', 'PATCH', updatePayload, `?id=eq.${targetRequestId}`);
 
             // 4. If rejected, return the balance
             if (action === 'reject') {
@@ -941,11 +949,11 @@ async function handleAdminAction(req, res, body) {
                 // Update balance
                 await supabaseFetch('users', 'PATCH', { balance: newBalance }, `?id=eq.${targetUserId}`);
                 
-                console.log(`Withdrawal ${request_id} rejected. ${amountToReturn} SHIB returned to user ${targetUserId}.`);
+                console.log(`Withdrawal ${targetRequestId} rejected. ${amountToReturn} SHIB returned to user ${targetUserId}.`);
             }
             
-            console.log(`Withdrawal ${request_id} set to ${newStatus} by admin ${user_id}.`);
-            sendSuccess(res, { message: `Request ${request_id} ${newStatus}.` });
+            console.log(`Withdrawal ${targetRequestId} set to ${newStatus} by admin ${user_id}.`);
+            return sendSuccess(res, { message: `Request ${targetRequestId} ${newStatus}.` });
 
         } else {
             return sendError(res, 'Invalid admin action.', 400);
@@ -998,7 +1006,7 @@ module.exports = async (req, res) => {
     return sendError(res, 'Missing "type" field in the request body.', 400);
   }
 
-  // ⬅️ initData Security Check (التعديل المصحح والأكثر مرونة)
+  // ⬅️ initData Security Check
   
   // قائمة الإجراءات المستثناة من فحص initData الصارم، لأنها محمية بآلية Action ID أو Rate Limit أو لا تحتاج initData أصلاً
   const exceptions = [
