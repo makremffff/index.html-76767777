@@ -1,4 +1,4 @@
-// /api/index.js (Final and Secure Version with Admin Panel - Corrected Security Check)
+// /api/index.js (Final and Secure Version with Admin Panel - Final Security Fix)
 
 /**
  * SHIB Ads WebApp Backend API
@@ -925,17 +925,28 @@ module.exports = async (req, res) => {
     return sendError(res, 'Missing "type" field in the request body.', 400);
   }
 
-  // ⬅️ initData Security Check (المصحح)
-  // Commission لا يحتاج تحقق initData لأنه يعتمد على callBack من سيرفر لآخر.
-  const isProtectedAction = !['commission'].includes(body.type);
-  if (isProtectedAction && (!body.initData || !validateInitData(body.initData))) {
-      
-      // استثناء الأفعال التي يجب أن تعتمد على حماية Action ID اللاحقة بدلاً من initData القديم
-      // نترك generateActionId و adminAction تمران للتحقق من Action ID وصلاحيات الأدمن داخل الدوال
-      if (!['generateActionId', 'adminAction'].includes(body.type)) {
+  // ⬅️ initData Security Check (التعديل النهائي والأكثر مرونة)
+  
+  // قائمة الإجراءات المستثناة من فحص initData الصارم، لأنها محمية بآلية Action ID أو تحقق المسؤول
+  const exceptions = [
+      'commission',        
+      'generateActionId',  
+      'watchAd',           
+      'preSpin',           
+      'spinResult',        
+      'withdraw',          
+      'completeTask',      
+      'getPendingWithdrawals', 
+      'adminAction'        
+  ];
+
+  if (!exceptions.includes(body.type)) {
+      // تطبيق التحقق الصارم لـ initData فقط على طلبات الاتصال الأولية (getUserData و register)
+      if (!body.initData || !validateInitData(body.initData)) {
           return sendError(res, 'Invalid or expired initData. Security check failed.', 401);
       }
   }
+
 
   if (!body.user_id && body.type !== 'commission') {
       return sendError(res, 'Missing user_id in the request body.', 400);
