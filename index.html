@@ -163,149 +163,121 @@
         .nav-button.withdraw-btn-nav:hover{box-shadow:0 6px 0 #991919,0 10px 15px rgba(0,0,0,.2)}
         .nav-button.withdraw-btn-nav:active{box-shadow:0 3px 0 #991919,0 5px 8px rgba(0,0,0,.15)}
 
-        /* ===== Task Screen - NEW STYLING (Professional & Simple) ===== */
+        /* ===== Task Screen - NEW STYLING (Matching the provided image) ===== */
         .task-screen{
             display:flex;
             flex-direction:column;
             align-items:center;
-            justify-content: flex-start;
-            padding-top: 30px; /* Reduced padding */
-            padding-bottom: 120px; 
-            overflow-y: auto;
-            background: #ffffff; /* White background */
-        }
-        .task-header{ 
-            text-align: center;
-            margin-bottom: 40px; /* Increased margin for better separation */
-            width: 100%;
-        }
-        .task-title{ 
-             font-family: 'Vazirmatn', sans-serif; 
-             font-size:36px; /* Larger, bolder title */
-             color:#0d0c1d; /* Very dark text */
-             font-weight:900; 
-             text-shadow: 2px 2px 4px rgba(0,0,0,0.1); 
-             margin-top: 10px;
+            justify-content: flex-start; 
+            padding-top: 0; 
+            padding-bottom: 0; 
+            overflow-y: hidden; 
+            background: #f0f0f0; /* Overall light background matching the requested aesthetic */
         }
 
-        /* New Task List Container */
-        .task-list-container {
-            width: 95%;
-            max-width: 400px; /* Increased max-width */
+        /* Container for the tasks - the white card in the image */
+        .task-card-container {
+            width: 90%; 
+            max-width: 380px; 
+            background: #ffffff; /* White card color */
+            border-radius: 20px; /* Rounded corners */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); /* Soft shadow for depth */
+            margin-top: 50px; 
+            padding: 30px 25px; 
             display: flex;
             flex-direction: column;
-            gap: 15px; /* Spacing between tasks */
+            align-items: flex-start; 
+            overflow-y: auto; 
         }
         
-        /* Task Item Row (The new card design) */
-        .task-row {
-            background: #f7f9fc; /* Very light subtle background */
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,.08); /* Soft shadow */
-            border: 1px solid #e0e6ec;
+        .task-title-image { 
+             font-family: 'Vazirmatn', sans-serif; 
+             font-size: 30px; 
+             color: #333333; 
+             font-weight: 700; /* Bold title */
+             margin-bottom: 30px; 
+             align-self: flex-start; 
+             text-align: right; /* Ensure Arabic title is correct */
+             width: 100%;
+        }
+
+        /* Individual Task Item - The actual rows */
+        .task-item-image {
+            width: 100%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: transform 0.2s ease;
+            padding: 15px 0; 
+            border-bottom: 1px solid #eeeeee; /* Light separator line */
         }
-        .task-row:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,.12);
+        .task-item-image:last-child {
+            border-bottom: none; 
         }
 
-        /* Task Info Text */
-        .task-info-new {
-            flex: 1;
-            text-align: left;
-            padding-right: 10px;
+        .task-name-image {
+            font-size: 16px; 
+            color: #555555; 
+            font-weight: 500; 
+            flex-grow: 1; 
+            text-align: right; /* Align text to the right for Arabic */
+            padding-left: 10px; /* Space between text and button */
+            line-height: 1.4;
         }
-        .task-info-new h4 {
+        .task-name-image strong {
+            display: block;
+            font-size: 14px;
             color: #2c3e50;
-            margin-bottom: 5px;
-            font-size: 16px;
             font-weight: 700;
         }
-        .task-info-new p {
-            color: #7f8c8d;
-            font-size: 13px;
-            margin-bottom: 5px;
-        }
-        .task-info-new .task-reward-new {
-            font-size: 18px;
-            font-weight: 800;
-            color: #2ecc71; /* Success Green for Reward */
-            font-family: 'Orbitron', sans-serif;
+        .task-name-image span {
+            display: block;
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 3px;
         }
 
-        /* Blue 3D Join Button (New Style) */
-        .join-btn-3d {
-            background: linear-gradient(145deg, #4a90e2, #357abd);
-            color:#fff;
+
+        /* Join Button - Directly matching the image's style */
+        .join-btn-image {
+            background: linear-gradient(180deg, #66b2ff 0%, #3385ff 100%); /* Blue gradient */
+            color: #ffffff;
             border: none;
-            padding: 10px 20px; 
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
+            padding: 8px 20px; 
+            border-radius: 8px; 
+            font-size: 15px; 
+            font-weight: 600; 
             cursor: pointer;
-            box-shadow: 0 5px 0 #2c5aa0, 0 8px 12px rgba(0,0,0,.2); /* 3D Shadow */
-            transition: all .1s ease;
-            text-transform: uppercase;
-            min-width: 80px; 
-            height: 40px; /* Fixed height for consistency */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
+            transition: all 0.2s ease;
+            text-transform: capitalize; 
+            min-width: 75px; 
             line-height: 1;
-            text-align: center;
         }
-        .join-btn-3d:hover{transform:translateY(-1px);box-shadow:0 6px 0 #2c5aa0,0 10px 15px rgba(0,0,0,.25)}
-        .join-btn-3d:active{transform:translateY(3px);box-shadow:0 2px 0 #2c5aa0}
-        
-        /* Style for the completed/disabled state */
-        .join-btn-3d:disabled,
-        .join-btn-3d.completed {
-             background: linear-gradient(145deg, #95a5a6, #7f8c8d); /* Grey gradient for completed/disabled */
-             box-shadow: 0 5px 0 #6c7a89, 0 8px 12px rgba(0,0,0,.1);
-             cursor: not-allowed;
-             color: #ecf0f1;
+        .join-btn-image:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
         }
-        .join-btn-3d.completed:hover,
-        .join-btn-3d:disabled:hover{
-            transform:translateY(0); /* No hover effect on completed/disabled */
-            box-shadow:0 5px 0 #6c7a89, 0 8px 12px rgba(0,0,0,.1);
-        }
-        .join-btn-3d.completed:active,
-        .join-btn-3d:disabled:active{
-            transform:translateY(0); 
-            box-shadow:0 5px 0 #6c7a89, 0 8px 12px rgba(0,0,0,.1);
+        .join-btn-image:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
         }
 
-
-        /* Task Note style */
-        .task-screen .note{
-            margin-top: 25px;
-            background: #f8f8f8;
-            border-left: 5px solid #3498db;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 14px;
-            color: #555;
-            text-align: left;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            width: 90%;
-            max-width: 400px;
+        /* Disabled/Completed Join Button */
+        .join-btn-image:disabled,
+        .join-btn-image.completed {
+            background: #cccccc; 
+            color: #888888;
+            box-shadow: none; 
+            cursor: not-allowed;
+            transform: none; 
         }
 
-        /* Added Back Button Style (Reusing back-btn style from withdraw/invite screens) */
-        .task-back-btn {
-            background:linear-gradient(145deg, #6c757d, #5a6268);
-            color:#fff;border:none;padding:12px 30px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;
-            box-shadow:0 5px 0 #4e555b;transition:all .1s ease;
-            width: 90%;
-            max-width: 400px;
-            margin-bottom: 20px;
-            margin-top: 20px; /* Added spacing from note */
+        /* Hide extra elements (Note, Back Button) */
+        .task-screen .note,
+        .task-screen .task-back-btn {
+            display: none !important; 
         }
-        .task-back-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #4e555b}
-        
+
         /* ===== Spin Screen ===== */
         .spin-screen{
             display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -613,27 +585,55 @@
 
     <div class="app-screen task-screen" id="taskScreen">
         
-        <div class="task-header">
-            <h2 class="task-title">المهام</h2>
-        </div>
-        
-        <div class="task-list-container">
-            <div class="task-row">
-                <div class="task-info-new">
-                    <h4>Join Telegram Channel</h4>
-                    <p>Complete this one-time task to instantly receive a welcome bonus.</p>
-                    <div class="task-reward-new">+50 SHIB</div>
+        <div class="task-card-container">
+            
+            <h2 class="task-title-image">المهام</h2>
+            
+            <div class="task-item-image">
+                <div class="task-name-image">
+                    <strong>Join Telegram Channel</strong>
+                    <span>Claim your welcome bonus of 50 SHIB.</span>
                 </div>
-                <button class="join-btn-3d" id="taskActionBtn" onclick="handleTaskAction()">
-                    <span>Join</span> 
+                <button class="join-btn-image" id="taskActionBtn" onclick="handleTaskAction()">
+                    Join
                 </button>
             </div>
+
+            <div class="task-item-image">
+                <div class="task-name-image">
+                    <strong>Subscribe to Partner Channel</strong>
+                    <span>Receive 20 SHIB upon successful subscription.</span>
+                </div>
+                <button class="join-btn-image" disabled>
+                    Join
+                </button>
+            </div>
+            
+            <div class="task-item-image">
+                <div class="task-name-image">
+                    <strong>Follow on X (Twitter)</strong>
+                    <span>Get 15 SHIB for a quick follow.</span>
+                </div>
+                <button class="join-btn-image" disabled>
+                    Join
+                </button>
+            </div>
+
+            <div class="task-item-image">
+                <div class="task-name-image">
+                    <strong>Visit our Official Website</strong>
+                    <span>Earn 10 SHIB for visiting the site.</span>
+                </div>
+                <button class="join-btn-image" disabled>
+                    Join
+                </button>
+            </div>
+            
         </div>
         
         <div class="note">
             💡 **Note:** Click the button to join the channel. Wait 5 seconds after joining, then click the button again to **'Claim Reward'**.
         </div>
-
         <button class="task-back-btn" onclick="hideTask()">Back to Main</button>
         
     </div>
@@ -1057,13 +1057,12 @@ You will earn 5% of the revenue from every referral you bring through ads!
 
             document.getElementById('referralsCountDisplay').textContent = referralsCount.toLocaleString();
             
-            // Task Button State Update (MODIFIED)
+            // Task Button State Update (MODIFIED to use new class)
             const taskBtn = document.getElementById('taskActionBtn');
             if (taskBtn) {
                 // Ensure the base class is always present for styling purposes
-                // Note: The old style relies on task-action-btn being added/removed, but the new style uses join-btn-3d
-                taskBtn.classList.remove('task-action-btn'); // Remove old class if it somehow remains
-                taskBtn.classList.add('join-btn-3d'); // Ensure new class is applied
+                taskBtn.classList.remove('join-btn-3d'); // Remove old class if it somehow remains
+                taskBtn.classList.add('join-btn-image'); // Ensure new class is applied
 
                 if (taskCompleted) {
                     // State: COMPLETED
@@ -1311,7 +1310,7 @@ You will earn 5% of the revenue from every referral you bring through ads!
                 taskActionState = 'CLAIM'; 
                 updateUI(); 
                 
-                // Show an instruction alert
+                // Show an instruction alert (Re-enabled for guidance)
                 showCustomAlert('Please Join Channel', 'You must join the channel first. Click the button again (after 5 seconds) to claim your reward.', 'warning');
 
             } else if (taskActionState === 'CLAIM') {
