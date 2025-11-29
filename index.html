@@ -7,7 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght~400;700&display=swap'); 
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap'); 
 
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:'Vazirmatn', Arial, Helvetica, sans-serif;overflow:hidden;background: #0d0c1d;}
@@ -148,13 +148,12 @@
         .nav-button:active{transform:translateY(2px);box-shadow:0 3px 0 #2c5aa0,0 5px 8px rgba(0,0,0,.15)}
         .nav-button span{display:block;text-shadow:0 1px 2px rgba(0,0,0,.3)}
 
-        /* UPDATED TASK BUTTON STYLE - Now Purple/Pink with 3D effect maintained */
         .nav-button.task-btn{
-            background:linear-gradient(145deg,#e91e63,#9c27b0); /* Pink/Purple */
-            box-shadow:0 5px 0 #6a1b9a,0 8px 12px rgba(0,0,0,.15); /* Darker purple shadow */
+            background:linear-gradient(145deg,#ffc107,#ff9800);
+            box-shadow:0 5px 0 #cc9a00,0 8px 12px rgba(0,0,0,.15);
         }
-        .nav-button.task-btn:hover{box-shadow:0 6px 0 #6a1b9a,0 10px 15px rgba(0,0,0,.2)}
-        .nav-button.task-btn:active{box-shadow:0 3px 0 #6a1b9a,0 5px 8px rgba(0,0,0,.15)}
+        .nav-button.task-btn:hover{box-shadow:0 6px 0 #cc9a00,0 10px 15px rgba(0,0,0,.2)}
+        .nav-button.task-btn:active{box-shadow:0 3px 0 #cc9a00,0 5px 8px rgba(0,0,0,.15)}
 
         /* NEW Style for Withdraw Nav Button */
         .nav-button.withdraw-btn-nav{
@@ -164,140 +163,112 @@
         .nav-button.withdraw-btn-nav:hover{box-shadow:0 6px 0 #991919,0 10px 15px rgba(0,0,0,.2)}
         .nav-button.withdraw-btn-nav:active{box-shadow:0 3px 0 #991919,0 5px 8px rgba(0,0,0,.15)}
 
-        /* ===== Task Screen - REVISED STYLING (High Fidelity) ===== */
+        /* ===== Task Screen - NEW STYLING (User's style) ===== */
         .task-screen{
             display:flex;
             flex-direction:column;
             align-items:center;
-            justify-content: flex-start; /* Align content to the top */
-            padding-top: 50px; /* Add padding to the top */
+            justify-content: flex-start; 
+            padding-top: 50px; 
             padding-bottom: 120px; 
             overflow-y: auto;
-            background: #f0f4f8; /* Very light, professional background */
+            background: #111; /* Dark background from user's style */
         }
         .task-header{ 
             text-align: center;
-            margin-bottom: 30px;
-            width: 100%;
-            max-width: 320px;
+            margin-bottom: 20px;
+            width: 90%;
+            max-width: 350px;
         }
         .task-title{ 
              font-family: 'Vazirmatn', sans-serif; 
-             font-size:28px; /* Slightly larger title */
-             color:#9c27b0; /* UPDATED: Darker purple, professional color */
-             font-weight:900; /* Extra bold */
+             font-size:24px; 
+             color:#fff; 
+             font-weight:700; 
              text-shadow: 1px 1px 2px rgba(0,0,0,0.05); 
         }
-        /* task-description is removed from HTML, but style kept for safety */
-        .task-description{
-            font-size: 16px;
-            color: #555; 
-            margin-top: 5px;
-        }
-
-        .task-card-container {
-            width: 90%;
-            max-width: 350px; /* Wider card */
-            background: linear-gradient(180deg, #ffffff, #f7f9fc); /* Subtle gradient for depth */
-            padding: 25px;
-            border-radius: 25px; /* More rounded corners */
-            box-shadow: 0 10px 30px rgba(0,0,0,.15), inset 0 0 10px rgba(255, 255, 255, 0.5); /* Enhanced shadow and inner highlight */
-            border: 2px solid #e0e6ec; /* Cleaner border */
-            margin-bottom: 30px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        .task-card-container::before {
-            content: '⭐';
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            font-size: 50px;
-            opacity: 0.1;
-            transform: rotate(15deg);
-        }
-
-        .task-item {
-            padding: 0;
-            border: none;
-            background: transparent;
-            box-shadow: none;
-            margin-bottom: 25px;
-            display: block; 
-        }
-        .task-info h4 {
-            color: #3498db; /* Professional blue */
-            margin-bottom: 10px;
-            font-size: 22px;
-            font-weight: 700;
-        }
-        .task-info p {
-            color: #7f8c8d; /* Subdued text color */
-            font-size: 15px;
-            margin-bottom: 20px;
-            line-height: 1.4;
-        }
-        .task-reward {
-            font-size: 30px; /* UPDATED: Slightly larger reward text */
-            font-weight: 800;
-            color: #e91e63; /* UPDATED: Vivid Pink */
-            font-family: 'Orbitron', sans-serif;
-            padding: 12px 20px;
-            background: #fff0e6;
-            border-radius: 15px;
-            display: inline-block;
-            margin-bottom: 25px;
-            border: 2px dashed #e91e63; /* UPDATED: Dashed border to look like a coupon */
-            letter-spacing: 1px;
-            box-shadow: 0 2px 5px rgba(0,0,0,.1);
-        }
-        .task-action-btn {
-            background:linear-gradient(145deg, #2ecc71, #27ae60); /* Success Green */
-            color:#fff;border:none;padding:15px 25px; /* Increased padding */
-            border-radius:12px;font-size:16px;font-weight:bold;cursor:pointer;
-            box-shadow:0 6px 0 #219d55;transition:all .1s ease; /* Deeper shadow for 3D effect */
-            text-transform: uppercase;
-            width: 100%; 
-            font-family: 'Vazirmatn', sans-serif;
-            margin-top: 15px;
-        }
-        .task-action-btn:disabled {
-            background: linear-gradient(145deg, #bdc3c7, #95a5a6);
-            box-shadow: 0 6px 0 #7f8c8d;
-            cursor: not-allowed;
-            color: #ecf0f1;
-        }
-        .task-action-btn:active{transform:translateY(3px);box-shadow:0 3px 0 #219d55}
         
-        .task-action-btn.completed {
-            background:linear-gradient(145deg, #95a5a6, #7f8c8d); 
-            box-shadow:0 6px 0 #6c7a89;
-            color: #ecf0f1;
+        /* New Task Card Style based on user's input */
+        .task-content-container {
+            width: 100%;
+            padding: 0 10px;
+            max-width: 400px;
         }
-        .task-action-btn.completed:active{transform:translateY(3px);box-shadow:0 3px 0 #6c7a89}
 
+        .task-item-card {
+            background:#1c1c1c; /* Background from user's style */
+            margin:10px 0;
+            padding:15px;
+            border-radius:8px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            border: 1px solid #333; /* Added a subtle border */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .task-text-info {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Button style from user's input */
+        .task-action-btn-new {
+            background:#222;
+            border:1px solid #444;
+            color:#fff;
+            padding:8px 18px;
+            border-radius:5px;
+            cursor:pointer;
+            font-size:1em;
+            min-width: 80px; /* Ensure button minimum width */
+            transition: background 0.1s ease, border-color 0.1s ease;
+        }
+        .task-action-btn-new:hover {
+            background: #333;
+            border-color: #666;
+        }
+        .task-action-btn-new:disabled {
+            background:#222;
+            color:#666;
+            cursor:not-allowed;
+        }
+        
+        .task-action-btn-new.completed {
+            background: #008000; /* Green for completed */
+            border-color: #006400;
+            color: #fff;
+            cursor: default;
+        }
+        .task-action-btn-new.completed:disabled {
+             background: #006400; /* Darker green when disabled (after completion) */
+             color: #ccc;
+        }
+        
         /* Task Note style */
         .task-screen .note{
             margin-top: 25px;
-            background: #f8f8f8;
-            border-left: 5px solid #3498db;
+            background: #222;
+            border-left: 5px solid #ffc107;
             padding: 15px;
             border-radius: 10px;
             font-size: 14px;
-            color: #555;
+            color: #ccc;
             text-align: left;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            width: 90%;
+            max-width: 400px;
         }
 
-        /* Added Back Button Style (Reusing back-btn style from withdraw/invite screens) */
+        /* Added Back Button Style */
         .task-back-btn {
             background:linear-gradient(145deg, #6c757d, #5a6268);
             color:#fff;border:none;padding:12px 30px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;
             box-shadow:0 5px 0 #4e555b;transition:all .1s ease;
             width: 90%;
             max-width: 350px;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
         .task-back-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #4e555b}
         
@@ -599,12 +570,33 @@
         
         <div class="button-container">
             <button class="nav-button" onclick="watchAds()"><span>Ads</span></button>
-            <button class="nav-button task-btn" onclick="showTask()"><span>QUEST</span></button>
+            <button class="nav-button task-btn" onclick="showTask()"><span>Daily Task</span></button>
             <button class="nav-button" onclick="showSpin()"><span>Spin</span></button>
             <button class="nav-button withdraw-btn-nav" onclick="showWithdraw()"><span>Withdraw</span></button>
             <button class="nav-button" onclick="inviteFriends()"><span>Invite</span></button>
         </div>
         </div>
+
+    <div class="app-screen task-screen" id="taskScreen">
+        <div class="task-header">
+            <h2 class="task-title">🔥 Daily Task: Join Our Channel</h2>
+        </div>
+        
+        <div class="task-content-container">
+            <div class="task-item-card">
+                <span class="task-text-info">Join Telegram Channel & Claim 50 SHIB</span>
+                <button class="task-action-btn-new" id="taskActionBtn" onclick="handleTaskAction()">
+                    Join & Claim
+                </button>
+            </div>
+        </div>
+
+        <div class="note">
+            ⚠️ **IMPORTANT:** You must join the channel first, and then click the button again (after 5 seconds) to claim your reward.
+        </div>
+        
+        <button class="task-back-btn" onclick="hideTask()">Back to Main</button>
+    </div>
 
     <div class="app-screen spin-screen" id="spinScreen">
         <div id="wheelBox">
@@ -937,6 +929,7 @@ You will earn 5% of the revenue from every referral you bring through ads!
         let referralsCount = 0; 
         let isBanned = false; 
         let isProcessingTask = false; 
+        let countdownInterval = null; // New variable for the countdown interval
         
         const sectors = [5, 10, 15, 20, 5]; 
 
@@ -1026,33 +1019,34 @@ You will earn 5% of the revenue from every referral you bring through ads!
 
             document.getElementById('referralsCountDisplay').textContent = referralsCount.toLocaleString();
             
-            // Task Button State Update (Note: taskActionBtn element is now removed, only logic remains)
-            // The logic here remains to support potential re-addition of the screen or direct task execution.
-            /* const taskBtn = document.getElementById('taskActionBtn');
+            // Task Button State Update 
+            const taskBtn = document.getElementById('taskActionBtn');
             if (taskBtn) {
+                // Clear any existing interval text if UI update is called externally
+                if (!isProcessingTask && countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                
                 if (taskCompleted) {
                     // State: COMPLETED
                     taskBtn.disabled = true;
-                    taskBtn.textContent = 'Task Completed (50 SHIB Claimed)';
-                    taskBtn.classList.remove('task-action-btn');
+                    taskBtn.textContent = 'Claimed'; // Changed text to fit new style
                     taskBtn.classList.add('completed');
                 } else {
                     // State: NOT COMPLETED
                     taskBtn.disabled = isProcessingTask; // Respect the processing flag
+                    taskBtn.classList.remove('completed');
                     
                     if (isProcessingTask) {
-                        taskBtn.textContent = 'Processing...';
+                        // Text will be set by the countdown timer in claimTaskReward
                     } else if (taskActionState === 'CLAIM') {
-                        taskBtn.textContent = 'Click HERE to Claim Reward';
+                        taskBtn.textContent = 'Claim'; 
                     } else {
-                        taskBtn.textContent = 'Join & Claim Reward';
+                        taskBtn.textContent = 'Join'; 
                     }
-                    
-                    taskBtn.classList.remove('completed');
-                    taskBtn.classList.add('task-action-btn');
                 }
             }
-            */
 
 
             const adButton = document.querySelector('button[onclick="watchAds()"]');
@@ -1167,28 +1161,33 @@ You will earn 5% of the revenue from every referral you bring through ads!
 
         /* ===== Task Screen Functions (UPDATED LOGIC) ===== */
         
-        // ** MODIFIED: Only displays a message since the screen is removed **
+        // ** MODIFIED: Now displays the actual task screen **
         function showTask(){
-            showCustomAlert('Task Screen Disabled', 'شاشة المهام غير متاحة حالياً، تم إزالتها مؤقتاً بناءً على طلبك. المنطق البرمجي للمهمة لا يزال موجوداً.', 'warning');
-            
-            // Original logic (now commented out):
-            // if (isBanned) {
-            //      showCustomAlert('Access Denied!', 'This account has been banned.', 'error');
-            //      return;
-            // }
-            // mainScreen.classList.remove('visible');
-            // // document.getElementById('taskScreen').classList.add('visible'); // <<< Removed this line
-            // loadUserData();
+            if (isBanned) {
+                 showCustomAlert('Access Denied!', 'This account has been banned.', 'error');
+                 return;
+            }
+            mainScreen.classList.remove('visible');
+            document.getElementById('taskScreen').classList.add('visible');
+            loadUserData();
         }
 
-        // ** REMOVED: Since the screen is gone, this back function is no longer needed **
-        // function hideTask(){
-        //     document.getElementById('taskScreen').classList.remove('visible');
-        //     mainScreen.classList.add('visible');
-        // }
+        function hideTask(){
+            // Clear any running countdown when leaving the screen
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+                isProcessingTask = false;
+                taskActionState = taskCompleted ? 'COMPLETED' : 'JOIN_OR_CLAIM'; // Reset state
+                updateUI();
+            }
+            document.getElementById('taskScreen').classList.remove('visible');
+            mainScreen.classList.add('visible');
+        }
 
         // Renamed and modified the old completeTask function
         async function claimTaskReward(){
+            const taskBtn = document.getElementById('taskActionBtn');
             if (isBanned) {
                  showCustomAlert('Access Denied!', 'This account has been banned.', 'error');
                  return;
@@ -1201,25 +1200,34 @@ You will earn 5% of the revenue from every referral you bring through ads!
             const countdownTime = 5; 
             let countdown = countdownTime; 
             
-            // Start the countdown alert (in a loop)
-            const timerInterval = setInterval(() => {
+            // Start the countdown on the button text
+            taskBtn.textContent = countdown;
+            
+            countdownInterval = setInterval(() => {
                 countdown--;
                 if (countdown >= 0) {
-                    showCustomAlert('Processing Reward...', `Waiting ${countdown} seconds to verify channel membership. Please do not close the app.`, 'warning');
+                    taskBtn.textContent = countdown;
+                    if(countdownTime - countdown > 1){ // Only show alert after 1 second delay
+                        // Show the processing alert
+                         showCustomAlert('Processing Reward...', `Waiting ${countdown} seconds to verify channel membership. Please do not close the app.`, 'warning');
+                    }
                 } else {
-                    clearInterval(timerInterval);
+                    // Stop the timer
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                    taskBtn.textContent = 'Verifying...';
+                    showCustomAlert('Verifying...', 'Contacting server to confirm membership and claim reward.', 'warning');
+
+                    // Proceed to server verification
+                    verifyAndClaim();
                 }
             }, 1000);
-
-            // Wait for the delay
-            await new Promise(resolve => setTimeout(resolve, countdownTime * 1000));
             
-            // Clear interval just in case it wasn't cleared by the countdown check
-            clearInterval(timerInterval);
-            
-            // Show final verification message
-            showCustomAlert('Verifying...', 'Contacting server to confirm membership and claim reward.', 'warning');
+        }
 
+        async function verifyAndClaim() {
+            const taskBtn = document.getElementById('taskActionBtn');
+            
             // 1. Request Action ID from the Server
             const actionId = await requestActionId('completeTask');
             if (!actionId) {
@@ -1253,12 +1261,15 @@ You will earn 5% of the revenue from every referral you bring through ads!
                 // If the server returns an error about completion or not joined, reset to first state
                 loadUserData();
                 taskActionState = 'JOIN_OR_CLAIM'; // Force restart the process
+                taskBtn.textContent = 'Join'; // Reset button text manually in case loadUserData fails
             }
-            updateUI(); 
+            updateUI();
         }
 
         // NEW function to handle the two-step action
         function handleTaskAction() {
+            const taskBtn = document.getElementById('taskActionBtn');
+            
             if (taskCompleted) {
                 showCustomAlert('Task Completed!', 'You have already completed this task and received the reward.', 'warning');
                 return;
@@ -1270,6 +1281,8 @@ You will earn 5% of the revenue from every referral you bring through ads!
             
             if (taskActionState === 'JOIN_OR_CLAIM') {
                 // First click: Redirect to the channel
+                taskBtn.disabled = true; // Disable temporarily while opening link
+                taskBtn.textContent = 'Joining...';
                 
                 // Use Telegram WebApp function if available, otherwise fallback
                 if (typeof Telegram.WebApp.openTelegramLink === 'function') {
@@ -1279,11 +1292,15 @@ You will earn 5% of the revenue from every referral you bring through ads!
                 }
                 
                 // Update state and UI to prompt for the second click (claim)
-                taskActionState = 'CLAIM'; 
-                // Since the screen is removed, we show the instructions via alert.
-                
-                // Show an instruction alert
-                showCustomAlert('Please Join Channel', 'You must join the channel first. Click the button again (after 5 seconds) to claim your reward.', 'warning');
+                // Re-enable and set state after a small delay to ensure link opens
+                setTimeout(() => {
+                    taskActionState = 'CLAIM'; 
+                    taskBtn.disabled = false;
+                    taskBtn.textContent = 'Claim'; 
+                    // Show an instruction alert
+                    showCustomAlert('Step 2: Claim', 'You must join the channel first. Now, click the button again to start the 5-second reward verification.', 'warning');
+                }, 1500);
+
 
             } else if (taskActionState === 'CLAIM') {
                 // Second click: Start the 5-second delay and server verification
