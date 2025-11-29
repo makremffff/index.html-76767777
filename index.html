@@ -163,7 +163,7 @@
         .nav-button.withdraw-btn-nav:hover{box-shadow:0 6px 0 #991919,0 10px 15px rgba(0,0,0,.2)}
         .nav-button.withdraw-btn-nav:active{box-shadow:0 3px 0 #991919,0 5px 8px rgba(0,0,0,.15)}
 
-        /* ===== Task Screen - NEW STYLING (User's style) ===== */
+        /* ===== Task Screen - UPDATED STYLING ===== */
         .task-screen{
             display:flex;
             flex-direction:column;
@@ -188,32 +188,42 @@
              text-shadow: 1px 1px 2px rgba(0,0,0,0.05); 
         }
         
-        /* New Task Card Style based on user's input */
+        /* Task Card Container - Slightly smaller overall */
         .task-content-container {
             width: 100%;
-            padding: 0 10px;
-            max-width: 400px;
+            padding: 0 15px; /* Increased side padding for better aesthetic balance */
+            max-width: 380px; /* Reduced max-width for a smaller look */
         }
 
+        /* NEW: Fancier, Smaller Card */
         .task-item-card {
-            background:#1c1c1c; /* Background from user's style */
-            margin:10px 0;
-            padding:15px;
-            border-radius:8px;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            border: 1px solid #333; /* Added a subtle border */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background: #1a1a2e; /* Dark slate/nebula background */
+            margin: 8px 0; /* Slightly smaller margin */
+            padding: 12px; /* Smaller padding */
+            border-radius: 10px; /* Slightly more rounded */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /* Neon/Glow Border effect */
+            border: 1px solid #3d3d5f; /* Subtle inner border */
+            box-shadow: 0 0 10px rgba(135, 206, 250, 0.2), 0 4px 15px rgba(0,0,0,0.4); /* Subtle neon blue glow and deep shadow */
         }
 
+        /* NEW: Pencil-like text effect */
         .task-text-info {
-            color: #fff;
-            font-size: 16px;
+            color: #f0f0f0; /* Off-white color for paper effect */
+            font-size: 15px; /* Slightly smaller font */
             font-weight: 500;
+            /* Pencil/Handwritten Effect: slight offset shadow to simulate double-writing */
+            text-shadow: 
+                0.5px 0.5px 0 #1a1a2e, /* Dark inset shadow */
+                -0.5px -0.5px 0 #1a1a2e, /* Dark inset shadow */
+                1px 1px 1px #00ffff; /* Subtle light blue glow */
+            letter-spacing: 0.1px; /* Subtle spacing */
+            font-family: 'Vazirmatn', cursive, sans-serif; /* Adding cursive fallback */
         }
 
-        /* Button style from user's input */
+        /* Button style from user's input (No changes here) */
         .task-action-btn-new {
             background:#222;
             border:1px solid #444;
