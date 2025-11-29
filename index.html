@@ -170,7 +170,7 @@
             align-items:center;
             justify-content: flex-start; 
             padding-top: 50px; 
-            padding-bottom: 120px; 
+            padding-bottom: 120px; /* Increased bottom padding to accommodate fixed back button */
             overflow-y: auto;
             background: #111; /* Dark background from user's style */
         }
@@ -223,17 +223,19 @@
             font-family: 'Vazirmatn', cursive, sans-serif; /* Adding cursive fallback */
         }
 
-        /* Button style from user's input (No changes here) */
+        /* MODIFIED: Button style - Better Centering */
         .task-action-btn-new {
             background:#222;
             border:1px solid #444;
             color:#fff;
-            padding:8px 18px;
+            padding: 10px 20px; /* Increased padding for better vertical centering */
             border-radius:5px;
             cursor:pointer;
-            font-size:1em;
-            min-width: 80px; /* Ensure button minimum width */
+            font-size: 1.1em; /* Increased font size for clarity */
+            line-height: 1; /* Added to help centering */
+            min-width: 80px; 
             transition: background 0.1s ease, border-color 0.1s ease;
+            text-align: center; /* Ensure text is centered */
         }
         .task-action-btn-new:hover {
             background: #333;
@@ -256,7 +258,7 @@
              color: #ccc;
         }
         
-        /* Task Note style */
+        /* Task Note style - KEPT BUT NOTE HTML REMOVED */
         .task-screen .note{
             margin-top: 25px;
             background: #222;
@@ -271,14 +273,20 @@
             max-width: 400px;
         }
 
-        /* Added Back Button Style */
+        /* MODIFIED: Back Button Style - FIXED to the bottom */
         .task-back-btn {
             background:linear-gradient(145deg, #6c757d, #5a6268);
             color:#fff;border:none;padding:12px 30px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;
             box-shadow:0 5px 0 #4e555b;transition:all .1s ease;
             width: 90%;
             max-width: 350px;
-            margin-top: 20px;
+            /* NEW: Positioning at the bottom */
+            position: fixed;
+            bottom: 20px; 
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 500; 
+            margin-top: 0; 
         }
         .task-back-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #4e555b}
         
@@ -594,17 +602,16 @@
         
         <div class="task-content-container">
             <div class="task-item-card">
-                <span class="task-text-info">Join Telegram Channel & Claim 50 SHIB</span>
+                <div>
+                    <span class="task-text-info" style="font-size: 14px; font-weight: bold; display: block;">Channel: @botbababab</span>
+                    <span class="task-text-info" style="font-size: 13px; display: block; margin-top: 5px;">Reward: 50 SHIB</span>
+                </div>
                 <button class="task-action-btn-new" id="taskActionBtn" onclick="handleTaskAction()">
                     Join & Claim
                 </button>
             </div>
         </div>
 
-        <div class="note">
-            ⚠️ **IMPORTANT:** You must join the channel first, and then click the button again (after 5 seconds) to claim your reward.
-        </div>
-        
         <button class="task-back-btn" onclick="hideTask()">Back to Main</button>
     </div>
 
