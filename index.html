@@ -163,14 +163,14 @@
         .nav-button.withdraw-btn-nav:hover{box-shadow:0 6px 0 #991919,0 10px 15px rgba(0,0,0,.2)}
         .nav-button.withdraw-btn-nav:active{box-shadow:0 3px 0 #991919,0 5px 8px rgba(0,0,0,.15)}
 
-        /* ===== Task Screen - UPDATED STYLING ===== */
+        /* ===== Task Screen - NEW STYLING (User's style) ===== */
         .task-screen{
             display:flex;
             flex-direction:column;
             align-items:center;
             justify-content: flex-start; 
             padding-top: 50px; 
-            padding-bottom: 120px; /* Increased bottom padding to accommodate fixed back button */
+            padding-bottom: 120px; 
             overflow-y: auto;
             background: #111; /* Dark background from user's style */
         }
@@ -188,54 +188,42 @@
              text-shadow: 1px 1px 2px rgba(0,0,0,0.05); 
         }
         
-        /* Task Card Container - Slightly smaller overall */
+        /* New Task Card Style based on user's input */
         .task-content-container {
             width: 100%;
-            padding: 0 15px; /* Increased side padding for better aesthetic balance */
-            max-width: 380px; /* Reduced max-width for a smaller look */
+            padding: 0 10px;
+            max-width: 400px;
         }
 
-        /* NEW: Fancier, Smaller Card */
         .task-item-card {
-            background: #1a1a2e; /* Dark slate/nebula background */
-            margin: 8px 0; /* Slightly smaller margin */
-            padding: 12px; /* Smaller padding */
-            border-radius: 10px; /* Slightly more rounded */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            /* Neon/Glow Border effect */
-            border: 1px solid #3d3d5f; /* Subtle inner border */
-            box-shadow: 0 0 10px rgba(135, 206, 250, 0.2), 0 4px 15px rgba(0,0,0,0.4); /* Subtle neon blue glow and deep shadow */
+            background:#1c1c1c; /* Background from user's style */
+            margin:10px 0;
+            padding:15px;
+            border-radius:8px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            border: 1px solid #333; /* Added a subtle border */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* NEW: Pencil-like text effect */
         .task-text-info {
-            color: #f0f0f0; /* Off-white color for paper effect */
-            font-size: 15px; /* Slightly smaller font */
+            color: #fff;
+            font-size: 16px;
             font-weight: 500;
-            /* Pencil/Handwritten Effect: slight offset shadow to simulate double-writing */
-            text-shadow: 
-                0.5px 0.5px 0 #1a1a2e, /* Dark inset shadow */
-                -0.5px -0.5px 0 #1a1a2e, /* Dark inset shadow */
-                1px 1px 1px #00ffff; /* Subtle light blue glow */
-            letter-spacing: 0.1px; /* Subtle spacing */
-            font-family: 'Vazirmatn', cursive, sans-serif; /* Adding cursive fallback */
         }
 
-        /* MODIFIED: Button style - Better Centering */
+        /* Button style from user's input */
         .task-action-btn-new {
             background:#222;
             border:1px solid #444;
             color:#fff;
-            padding: 10px 20px; /* Increased padding for better vertical centering */
+            padding:8px 18px;
             border-radius:5px;
             cursor:pointer;
-            font-size: 1.1em; /* Increased font size for clarity */
-            line-height: 1; /* Added to help centering */
-            min-width: 80px; 
+            font-size:1em;
+            min-width: 80px; /* Ensure button minimum width */
             transition: background 0.1s ease, border-color 0.1s ease;
-            text-align: center; /* Ensure text is centered */
         }
         .task-action-btn-new:hover {
             background: #333;
@@ -258,7 +246,7 @@
              color: #ccc;
         }
         
-        /* Task Note style - KEPT BUT NOTE HTML REMOVED */
+        /* Task Note style */
         .task-screen .note{
             margin-top: 25px;
             background: #222;
@@ -273,20 +261,14 @@
             max-width: 400px;
         }
 
-        /* MODIFIED: Back Button Style - FIXED to the bottom */
+        /* Added Back Button Style */
         .task-back-btn {
             background:linear-gradient(145deg, #6c757d, #5a6268);
             color:#fff;border:none;padding:12px 30px;border-radius:10px;font-size:15px;font-weight:bold;cursor:pointer;
             box-shadow:0 5px 0 #4e555b;transition:all .1s ease;
             width: 90%;
             max-width: 350px;
-            /* NEW: Positioning at the bottom */
-            position: fixed;
-            bottom: 20px; 
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 500; 
-            margin-top: 0; 
+            margin-top: 20px;
         }
         .task-back-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #4e555b}
         
@@ -588,7 +570,7 @@
         
         <div class="button-container">
             <button class="nav-button" onclick="watchAds()"><span>Ads</span></button>
-            <button class="nav-button task-btn" onclick="showTask()"><span>Daily Task</span></button>
+            <button class="nav-button task-btn" onclick="showTask()"><span>Task</span></button>
             <button class="nav-button" onclick="showSpin()"><span>Spin</span></button>
             <button class="nav-button withdraw-btn-nav" onclick="showWithdraw()"><span>Withdraw</span></button>
             <button class="nav-button" onclick="inviteFriends()"><span>Invite</span></button>
@@ -597,21 +579,22 @@
 
     <div class="app-screen task-screen" id="taskScreen">
         <div class="task-header">
-            <h2 class="task-title">🔥 Daily Task: Join Our Channel</h2>
+            <h2 class="task-title">🔥 Daily Task: Get 50 SHIB Reward</h2>
         </div>
         
         <div class="task-content-container">
             <div class="task-item-card">
-                <div>
-                    <span class="task-text-info" style="font-size: 14px; font-weight: bold; display: block;">Channel: @botbababab</span>
-                    <span class="task-text-info" style="font-size: 13px; display: block; margin-top: 5px;">Reward: 50 SHIB</span>
-                </div>
+                <span class="task-text-info">Complete This Task & Claim 50 SHIB</span>
                 <button class="task-action-btn-new" id="taskActionBtn" onclick="handleTaskAction()">
                     Join & Claim
                 </button>
             </div>
         </div>
 
+        <div class="note">
+            ⚠️ **IMPORTANT:** You must join the channel first, and then click the button again (after 5 seconds) to claim your reward.
+        </div>
+        
         <button class="task-back-btn" onclick="hideTask()">Back to Main</button>
     </div>
 
